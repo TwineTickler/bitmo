@@ -7,4 +7,4 @@ import log
 
 #
 # 1. If log path doesn't exist, then create it.
-print(log.check_log_path())
+log.check_log_path()
