@@ -1,9 +1,13 @@
 TODO:
 
-3. Create a logging script
-1. determine a method of saving data to a database from python.
+1. Create a logging script - DONE
+
+2. determine a method of saving data to a database from python. - DONE
     a. It seems that we have a SQLite instance to use for this. 
     b. https://towardsdatascience.com/yes-python-has-a-built-in-database-heres-how-to-use-it-b3c033f172d3
-2. verify connectivity to the coin market cap API
+
+3. verify connectivity to the coin market cap API - DONE
+
+4. Determine what data we'd like to store
 
 

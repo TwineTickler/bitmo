@@ -15,17 +15,23 @@ def check_log_path():
         # path missing, (can't log it because we don't have a log folder yet)
         # create it
         os.mkdir(full_log_path)
+        # beginning a new session
+        log('     -----     BEGINNING NEW SESSION     -----')
         # path created. log it
-        log('log - log path created')
+        log('log path created')
     else:
+        # beginning a new session
+        log('     -----     BEGINNING NEW SESSION     -----')
         # log that path already exists
-        log('log - log path already exists')
+        log('log path already exists')
 
 def log(message):
-    # determine which file to use.
-    # if current log file exists then use it, if not, then create one.
+    # determine which file to use. If current log file exists then use it, if not, then create one.
     current_file_name = full_log_path + str(datetime.today().strftime('%Y-%m-%d')) + '.txt'
-    if (os.path.isfile(current_file_name)):
-        print('file exists')
-    else:
-        print('file does not exist')
+    # if we use the 'a' mode then it shouldn't matter if the file exists or not, if it does not, it will create it.
+    try:
+        f = open(current_file_name, 'a') # create or open the current file
+        f.write(str(datetime.now()) + ' --- ' + message + '\n') # write the log message + a new line
+        f.close()
+    except:
+        print('Error writing to log')
