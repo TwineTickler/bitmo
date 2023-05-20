@@ -23,6 +23,25 @@ except:
     log.log('Error connecting to database')
     print('Error connecting to database')
 
+# create the tables we need if they do not already exist
+c = conn.cursor()
+try:
+    c.execute("""
+        CREATE TABLE response_statuses (
+            timestamp NUMERIC,
+            error_code INTEGER,
+            error_message TEXT,
+            elapsed INTEGER,
+            credit_count INTEGER
+        )
+    """)    
+    conn.commit()
+    log.log('created response_statuses table')
+    print('created response_statuses table')
+except:
+    log.log('Error creating response_statuses table (table probably already exists)')
+    print('Error creating response_statuses table (table probably already exists)')
+
 # close the connection to the database
 try:
     conn.close()
@@ -39,7 +58,7 @@ APIkey = config.cmc_environment['APIkey']
 
 parameters = {
   'start':'1',
-  'limit':'5000',
+  'limit':'10',
   'convert':'USD'
 }
 headers = {
@@ -52,12 +71,19 @@ session.headers.update(headers)
 
 try:
     response = session.get(url, params=parameters)
+    log.log('Successful connection to CMC API')
     data = json.loads(response.text)
-    log.log(str(data))
-    print(data)
+    log.log(str(data['status']))
+    # print(data)
 except (ConnectionError, Timeout, TooManyRedirects) as e:
+    log.log('Error connecting to CMC API')
     log.log(e)
     print(e)
+
+# save the status response in it's own table
+
+print(data['status'])
+# print(data['data'])
 
 # End program
 log.log('Program Complete')

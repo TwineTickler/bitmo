@@ -8,6 +8,65 @@ TODO:
 
 3. verify connectivity to the coin market cap API - DONE
 
-4. Determine what data we'd like to store
+4. Determine what data is available to us in the endpoints
+v1/cryptocurrency/Listings/Latest:
+    Name: Bitcoin
+    symbol: BTC 
+    num_market_pairs: 10209
+    date_added: 2010-07-13
+    cmc_rank: 1
+    last_updated: 2023-05-18T04:27:00.000Z
+    infinite_supply: False
+    quote
+        USD
+            price: 27321.xxxxxxxx
+            volume_24h: xxxxxx.xxxxxx
+            volume_change_24h: 23.23
+            'percent_change_1h': -0.15257566, 
+            'percent_change_24h': 0.89425865, 
+            'percent_change_7d': -0.39709286, 
+            'percent_change_30d': -7.3645651, 
+            'percent_change_60d': 0.44944957, 
+            'percent_change_90d': 14.77258088,
+            'market_cap': 529401291138.8631,
+            last_updated: '2023-05-18T04:27:00.000Z'
+    platform
+        ID
+        name
+        symbol
+        slug
+        token_address
+
+v2/cryptocurrency/Quotes/Latest:
+
+data on the currency, as well as quote data. (similar to Listings/Latest)
+
+5. Determine what data we could like to use for caluculation:
+    price
+    percent_change_24h (trading price)
+    percent_change_7d  (trading price)
+    percent_change_7d  (trading price)
+    volume_change_24h
+    cmc_rank ------------
+    market_cap ---------- These two can both be used for the same thing. CMC rank is just a rank based off market cap
+    symbol 
+    num_market_pairs     
+
+Listings/Latest -> used to get ALL currencies
+Quotes/Latest -> used to get price for a particular currency
+
+* Another idea is that we could also find newly listed Crypto's based off of date_added.
+
+6. Determine algorythm we will use to find suitable currencies.
+
+    a. first lets get ALL of the currencies and put them in a database.
+        run in sandbox first to make sure we can get them all, then production to see how many there are (how expensive this will be to run daily)
+
+
+7. Successfully retrieve that data from sandbox
+
+8. Create a database that can store this data
+
+9. Write the data to the database 
 
 
