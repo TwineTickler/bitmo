@@ -4,50 +4,13 @@
 
 import config
 import log
-import sqlite3
+import db
 import json
 from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
 # 1. If log path doesn't exist, then create it.
 log.check_log_path()
-
-# 2. Connect to the database
-database_path = config.absolute_path + config.db_path + config.db_name # build the path based off the config file
-log.log('database is: ' + database_path)
-
-try:
-    conn = sqlite3.connect(database_path)
-    log.log('connected to database')
-except:
-    log.log('Error connecting to database')
-    print('Error connecting to database')
-
-# create the tables we need if they do not already exist
-c = conn.cursor()
-try:
-    c.execute("""
-        CREATE TABLE response_statuses (
-            timestamp NUMERIC,
-            error_code INTEGER,
-            error_message TEXT,
-            elapsed INTEGER,
-            credit_count INTEGER
-        )
-    """)    
-    conn.commit()
-    log.log('created response_statuses table')
-    print('created response_statuses table')
-except:
-    log.log('Error creating response_statuses table (table probably already exists)')
-    print('Error creating response_statuses table (table probably already exists)')
-
-# close the connection to the database
-try:
-    conn.close()
-    log.log('closed connection to database')
-except:
-    log.log('Error closing connection to database')
 
 # 3. Connect to the Coin Market Cap API
 log.log('connecting to Coin Market Cap using the ' + config.cmc_environment['environment'] + ' environment')
@@ -84,6 +47,10 @@ except (ConnectionError, Timeout, TooManyRedirects) as e:
 
 print(data['status'])
 # print(data['data'])
+
+# db.initiate_db('insert_status_response', data['status'])
+db.open_db_connection()
+db.close_db_connection()
 
 # End program
 log.log('Program Complete')

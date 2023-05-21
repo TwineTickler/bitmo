@@ -1,4 +1,5 @@
 # global settings used by the app
+# you will need to add a text file named 'CMCApiKey.txt' to the root folder that contains your production API Key
 
 # import all necessary libraries and files
 
