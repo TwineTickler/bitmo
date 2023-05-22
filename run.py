@@ -20,8 +20,8 @@ url = config.cmc_environment['url']
 APIkey = config.cmc_environment['APIkey']
 
 parameters = {
-  'start':'1',
-  'limit':'10',
+  'start':'1', # 1 is default so I don't believe this is needed.
+  'limit':'180',
   'convert':'USD'
 }
 headers = {
@@ -43,14 +43,24 @@ except (ConnectionError, Timeout, TooManyRedirects) as e:
     log.log(e)
     print(e)
 
-# save the status response in it's own table
-
-print(data['status'])
+# the following is only used for troubleshooting:
+# print(data['status'])
 # print(data['data'])
+print('number of currencies is: ' + str(len(data['data'])) + '\n')
+print(str(data['data'][0]) + '\n')
+print(str(data['data'][1]) + '\n')
+print(str(data['data'][2]) + '\n')
+print(str(data['data'][3]) + '\n')
+print(str(data['data'][4]) + '\n')
+print(str(data['data'][5]))
 
-# db.initiate_db('insert_status_response', data['status'])
-db.open_db_connection()
-db.close_db_connection()
+# save data to the database
+conn = db.open_db_connection() # open db connection
+db.create_tables(conn) # insure tables are created if not already
+db.insert_response_status(conn, data['status']) # store response status
+# store currency info TODO
+# store quote info TODO
+db.close_db_connection(conn) # close db connection
 
 # End program
 log.log('Program Complete')

@@ -13,9 +13,10 @@ log_path = '/logs/'
 db_path = '/db/'
 
 # files
-db_name = 'bitmo-01.db'
+db_name = 'bitmo-02.db'
+API_key_file_name = '/' + 'CMCApiKey.txt'
 
-# Coin Market Cap API Environment
+# Coin Market Cap API Environment (comment out the one you do not want and the rest of the script will set the correct values)
 environment = 'sandbox'
 # environment = 'production'
 
@@ -27,8 +28,13 @@ if (environment == 'sandbox'):
     }
 elif (environment == 'production'):
     # get the API key from the file
-    with open('CMCApiKey.txt') as f:
-        production_API_key = f.read()
+    key_location = absolute_path + API_key_file_name
+    try:
+        with open(key_location) as f:
+            production_API_key = f.read()
+    except:
+        print('error reading CMC Api Key from file. Does the API Key file exist and is in the correct place?')
+        production_API_key = '0'
     cmc_environment = {
         'environment': environment,
         'url': 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest',
