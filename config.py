@@ -13,7 +13,7 @@ log_path = '/logs/'
 db_path = '/db/'
 
 # files
-db_name = 'bitmo-02.db'
+db_name = 'bitmo-03.db'
 API_key_file_name = '/' + 'CMCApiKey.txt'
 
 # Coin Market Cap API Environment (comment out the one you do not want and the rest of the script will set the correct values)

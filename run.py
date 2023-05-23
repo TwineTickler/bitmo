@@ -46,20 +46,29 @@ except (ConnectionError, Timeout, TooManyRedirects) as e:
 # the following is only used for troubleshooting:
 # print(data['status'])
 # print(data['data'])
-print('number of currencies is: ' + str(len(data['data'])) + '\n')
-print(str(data['data'][0]) + '\n')
-print(str(data['data'][1]) + '\n')
-print(str(data['data'][2]) + '\n')
-print(str(data['data'][3]) + '\n')
-print(str(data['data'][4]) + '\n')
-print(str(data['data'][5]))
+# print('number of currencies is: ' + str(len(data['data'])) + '\n')
+# print(str(data['data'][0]) + '\n')
+# print(str(data['data'][1]) + '\n')
+# print(str(data['data'][2]) + '\n')
+# print(str(data['data'][3]) + '\n')
+# print(str(data['data'][4]) + '\n')
+# print(str(data['data'][5]))
 
 # save data to the database
 conn = db.open_db_connection() # open db connection
 db.create_tables(conn) # insure tables are created if not already
 db.insert_response_status(conn, data['status']) # store response status
 # store currency info TODO
-# store quote info TODO
+
+currency_count = str(len(data['data']))
+log.log('storing ' + currency_count + ' currency entries')
+print('storing ' + currency_count + ' currency entries')
+for c in data['data']:
+    # print(str(c) + '\n')
+    db.insert_currency(conn, c)
+
+# TODO: store quote info
+
 db.close_db_connection(conn) # close db connection
 
 # End program

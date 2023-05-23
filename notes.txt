@@ -57,6 +57,47 @@ Quotes/Latest -> used to get price for a particular currency
 
 * Another idea is that we could also find newly listed Crypto's based off of date_added.
 
+SQL notes:
+
+CREATE TABLE IF NOT EXISTS response_status (
+                timestamp NUMERIC,
+                error_code INTEGER,
+                error_message TEXT,
+                elapsed INTEGER,
+                credit_count INTEGER,
+                endpoint TEXT, <---- which endpoint responded
+                insert_date NUMERIC <---- python datetime stamp of insert
+)
+CREATE TABLE IF NOT EXISTS currency (
+                id INTEGER, <--- I believe we can use this as PK if needed
+                name TEXT,
+                symbol TEXT,
+                slug TEXT,
+                cmc_rank INTEGER,
+                num_market_pairs INTEGER,
+                infinite_supply NUMERIC,
+                last_updated_cmc NUMERIC, <---- time stamp from CMC response
+                last_update NUMERIC, <---- python timestamp
+                insert_date NUMERIC <---- python timestamp
+)
+CREATE TABLE IF NOT EXISTS quote (
+                id INTEGER, <--- FK from currency table
+                currency_base TEXT, <--- mostly will stay as USD I believe 
+                insert_date NUMERIC, <--- python timestamp
+                price NUMERIC,
+                volume_24h NUMERIC,
+                volume_change_24h NUMERIC,
+                percent_change_1h NUMERIC,
+                percent_change_24h NUMERIC,
+                percent_change_7d NUMERIC,
+                percent_change_30d NUMERIC,
+                percent_change_60d NUMERIC,
+                percent_change_90d NUMERIC,
+                market_cap NUMERIC,
+                market_cap_dominance NUMERIC,
+                last_updated_cmc NUMERIC <--- timestamp from cmc
+            )
+
 6. Determine algorythm we will use to find suitable currencies.
 
     a. first lets get ALL of the currencies and put them in a database.
