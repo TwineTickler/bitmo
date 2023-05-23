@@ -1,0 +1,10 @@
+# ignore API Key file
+CMCApiKey.txt
+
+# ignore log and db folders
+/logs
+/db
+
+# unknown files (git required I believe)
+.DS_Store
+__pycache__/
