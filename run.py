@@ -1,4 +1,5 @@
 # Execute this command to run the program
+print('Beginning Program...')
 
 # import all the needed files
 
@@ -42,6 +43,7 @@ except (ConnectionError, Timeout, TooManyRedirects) as e:
     log.log('Error connecting to CMC API')
     log.log(e)
     print(e)
+    exit() # end the program here.
 
 # the following is only used for troubleshooting:
 # print(data['status'])
@@ -63,10 +65,16 @@ db.insert_response_status(conn, data['status']) # store response status
 currency_count = str(len(data['data']))
 log.log('storing ' + currency_count + ' currency entries')
 print('storing ' + currency_count + ' currency entries')
+error_occurred = False
 for c in data['data']:
     # print(str(c) + '\n')
-    db.insert_currency(conn, c)
-
+    success = db.save_currency(conn, c)
+    if (not success):
+        error_occurred = True
+if (error_occurred):
+    s = 'one or more errors occurred during saving to currency table, please check the log for details'
+    log.log(s)
+    print(s)
 # TODO: store quote info
 
 db.close_db_connection(conn) # close db connection

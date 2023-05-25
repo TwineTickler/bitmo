@@ -15,8 +15,10 @@ def open_db_connection():
         conn = sqlite3.connect(database_path)
         log.log('connected to database')
     except:
-        log.log('Error connecting to database')
-        print('Error connecting to database')
+        s = 'Error connecting to database'
+        log.log(s)
+        print(s)
+        exit() # quit the program if we cannot connect to the database
     return conn
 
 def close_db_connection(conn):
@@ -25,8 +27,9 @@ def close_db_connection(conn):
         conn.close()
         log.log('closed connection to database')
     except:
-        log.log('Error closing connection to database')
-        print('Error closing connection to database')
+        s = 'Error closing connection to database'
+        log.log(s)
+        print(s)
 
 def create_tables(conn):
     # create the tables we need if they do not already exist
@@ -47,8 +50,9 @@ def create_tables(conn):
         """)    
         log.log('response_status table is setup (created or already exists)')
     except:
-        log.log('error creating response_status table')
-        print('error creating response_status table')
+        s = 'error creating response_status table'
+        log.log(s)
+        print(s)
     try:
         c.execute('''
             CREATE TABLE IF NOT EXISTS currency (
@@ -66,8 +70,9 @@ def create_tables(conn):
         ''')
         log.log('currency table is setup (created or already exists)')
     except:
-        log.log('error creating currency table')
-        print('error creating currency table')
+        s = 'error creating currency table'
+        log.log(s)
+        print(s)
     try:
         c.execute('''
             CREATE TABLE IF NOT EXISTS quote (
@@ -90,13 +95,15 @@ def create_tables(conn):
         ''')
         log.log('quote table is setup (created or already exists)')
     except:
-        log.log('error creating quote table')
-        print('error creating quote table')
+        s = 'error creating quote table'
+        log.log(s)
+        print(s)
     try:
         conn.commit() # commit the changes
     except:
-        log.log('error commiting table setup changes')
-        print('error commiting table setup changes')
+        s = 'error commiting table setup changes'
+        log.log(s)
+        print(s)
 
 def insert_response_status(conn, d):
     log.log('inserting response status into db')
@@ -127,45 +134,76 @@ def insert_response_status(conn, d):
         conn.commit()
         log.log('response status successfully inserted into db')
     except:
-        log.log('error inserting into response_status table')
-        print('error inserting into response_status table')
+        s = 'error inserting into response_status table'
+        log.log(s)
+        print(s)
 
-def insert_currency(conn, d):
-    data_tuple = (
-        d['id'],
-        d['name'],
-        d['symbol'],
-        d['slug'],
-        d['cmc_rank'],
-        d['num_market_pairs'],
-        d['infinite_supply'],
-        d['last_updated'],
-        str(datetime.now()), # last_update
-        str(datetime.now())  # insert_date
-    )
-    sql = '''
-        INSERT INTO currency (
-            id,
-            name,
-            symbol,
-            slug,
-            cmc_rank,
-            num_market_pairs,
-            infinite_supply,
-            last_updated_cmc,
-            last_update,
-            insert_date
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-    '''
+def save_currency(conn, d):
+    # if currency doesn't exist yet, then INSERT it.
+    # if it exists then UPDATE any data that has changed on it.
+    # setup cursor
     c = conn.cursor()
-    try:
-        c.execute(sql, data_tuple)
-        conn.commit()
-        log.log('currency ID ' + str(d['id']) + ' successfully inserted into currency table')
-    except:
-        log.log('error inserting currency ID ' + str(d['id']) + ' into currency table')
-        print('error inserting currency ID ' + str(d['id']) + ' into currency table')
+
+    # run a select to see if it exists
+    sql = 'SELECT * FROM currency where id = {};'.format(d['id']) # try to select the ID of the currency
+    c.execute(sql)
+    select_result = c.fetchall()
+
+    if (len(select_result) > 0):
+        log.log('currency id {} already exists, check for updates')
+        print('one or more currency found')
+        
+        # lenth of the result SHOULD only be 1. If it's more than 1, throw an error.
+        if (len(select_result) > 1):
+            s = 'Error: the currency ID {} returned MORE than 1 result. The ID SHOULD be distinct in this table, please investigate'.format(d['id'])
+            log.log(s)
+            print(s)
+            return False # return with an error
+
+        # ONLY 1 result -> find what values need to be updated
+        
+
+    else:
+        # insert new currency into the currency table
+        log.log('no currency match found. Insert new entry')
+        data_tuple = (
+            d['id'],
+            d['name'],
+            d['symbol'],
+            d['slug'],
+            d['cmc_rank'],
+            d['num_market_pairs'],
+            d['infinite_supply'],
+            d['last_updated'],
+            str(datetime.now()), # last_update
+            str(datetime.now())  # insert_date
+        )
+        # INSERT
+        sql = '''
+            INSERT INTO currency (
+                id,
+                name,
+                symbol,
+                slug,
+                cmc_rank,
+                num_market_pairs,
+                infinite_supply,
+                last_updated_cmc,
+                last_update,
+                insert_date
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        '''
+        try:
+            c.execute(sql, data_tuple)
+            conn.commit()
+            log.log('currency ID ' + str(d['id']) + ' (' + str(d['name']) + ') successfully inserted into currency table')
+            return True # used to track errors.
+        except:
+            s = 'error inserting currency ID ' + str(d['id']) + ' (' + str(d['name']) + ') into currency table'
+            log.log(s)
+            print(s)
+            return False # used to track if an error occurred.
 
     # TODO: we don't need to always insert all the data into this table.
     #       create logic that will only update data that has changed, IF the entry for the currency already exists.
