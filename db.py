@@ -206,11 +206,11 @@ def save_currency(conn, d):
             # cmc_rank has changed, include it in the UPDATE
             sql += 'cmc_rank = ?, '
             data_tuple += (d['cmc_rank'],)
-        if (select_result[0][4] != d['num_market_pairs']):
+        if (select_result[0][5] != d['num_market_pairs']):
             # num_market_pairs has changed, include it in the UPDATE
             sql += 'num_market_pairs = ?, '
             data_tuple += (d['num_market_pairs'],)
-        if (select_result[0][5] != d['infinite_supply']):
+        if (select_result[0][6] != d['infinite_supply']):
             # infinite_supply has changed, include it in the UPDATE
             sql += 'infinite_supply = ?, '
             data_tuple += (d['infinite_supply'],)
@@ -232,7 +232,6 @@ def save_currency(conn, d):
             log.log('Data Dump: ' + str(d)) # dump the data into the log for later review
             print(s)
             return False # Error occurred
-
 
     else:
         # insert new currency into the currency table
