@@ -34,4 +34,4 @@ def log(message):
         f.write(str(datetime.now()) + ' --- ' + message + '\n') # write the log message + a new line
         f.close()
     except:
-        print('Error writing to log')
+        print('ERROR: Error writing to log. Please Investigate.')

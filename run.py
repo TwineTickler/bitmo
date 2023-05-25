@@ -10,10 +10,20 @@ import json
 from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
-# 1. If log path doesn't exist, then create it.
+# If log path doesn't exist, then create it.
 log.check_log_path()
 
-# 3. Connect to the Coin Market Cap API
+# Verify Database is connected and setup:
+conn = db.open_db_connection() # open db connection
+db.create_tables(conn) # insure tables are created if not already
+
+# Currenty we are assuming the following:
+#    1. Checking CMC API for ALL currencies, once per day.
+#       This is why we'll use the /v1/cryptocurrency/listings/latest endpoint.
+#    2. If we'd like to check specific currencies later on, then we should use the /v2/cryptocurrency/quotes/latest
+#       And we will need to write NEW functionality to account for this.
+
+# Connect to the Coin Market Cap API
 log.log('connecting to Coin Market Cap using the ' + config.cmc_environment['environment'] + ' environment')
 
 # set variables from config file:
@@ -40,9 +50,11 @@ try:
     log.log(str(data['status']))
     # print(data)
 except (ConnectionError, Timeout, TooManyRedirects) as e:
-    log.log('Error connecting to CMC API')
     log.log(e)
     print(e)
+    s = 'ERROR - Error connecting to CMC API. Aborting program.'
+    log.log(s)
+    print(s)
     exit() # end the program here.
 
 # the following is only used for troubleshooting:
@@ -57,14 +69,13 @@ except (ConnectionError, Timeout, TooManyRedirects) as e:
 # print(str(data['data'][5]))
 
 # save data to the database
-conn = db.open_db_connection() # open db connection
-db.create_tables(conn) # insure tables are created if not already
 db.insert_response_status(conn, data['status']) # store response status
-# store currency info TODO
 
+# store currency info
 currency_count = str(len(data['data']))
-log.log('storing ' + currency_count + ' currency entries')
-print('storing ' + currency_count + ' currency entries')
+s = 'storing ' + currency_count + ' currency entries'
+log.log(s)
+print(s)
 error_occurred = False
 for c in data['data']:
     # print(str(c) + '\n')
@@ -72,13 +83,16 @@ for c in data['data']:
     if (not success):
         error_occurred = True
 if (error_occurred):
-    s = 'one or more errors occurred during saving to currency table, please check the log for details'
+    s = 'ERROR - one or more errors occurred during saving to currency table, please check the log for details'
     log.log(s)
     print(s)
+# by now we should have a currency added for each quote. Store the quote info.
 # TODO: store quote info
 
 db.close_db_connection(conn) # close db connection
 
 # End program
-log.log('Program Complete')
+s = 'Program Completed'
+log.log(s)
+print(s)
 

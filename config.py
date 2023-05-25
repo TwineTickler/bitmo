@@ -33,8 +33,8 @@ elif (environment == 'production'):
         with open(key_location) as f:
             production_API_key = f.read()
     except:
-        print('error reading CMC Api Key from file. Does the API Key file exist and is in the correct place?')
-        production_API_key = '0'
+        print('ERROR: Error reading CMC Api Key from file. Does the API Key file exist and is in the correct place?')
+        exit() # exit the program if we cannot read the API key.
     cmc_environment = {
         'environment': environment,
         'url': 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest',
