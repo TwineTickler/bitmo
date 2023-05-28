@@ -33,7 +33,7 @@ APIkey = config.cmc_environment['APIkey']
 parameters = {
   'start':'1', # 1 is default so I don't believe this is needed.
   'limit':'180',
-  'convert':'USD'
+  'convert':'USD,CAD'
 }
 headers = {
   'Accepts': 'application/json',
@@ -49,50 +49,64 @@ try:
     data = json.loads(response.text)
     log.log(str(data['status']))
     # print(data)
+    
 except (ConnectionError, Timeout, TooManyRedirects) as e:
     log.log(e)
     print(e)
-    s = 'ERROR - Error connecting to CMC API. Aborting program.'
+    s = 'ERROR: Error connecting to CMC API. Aborting program.'
     log.log(s)
     print(s)
     exit() # end the program here.
-
-# the following is only used for troubleshooting:
-# print(data['status'])
-# print(data['data'])
-# print('number of currencies is: ' + str(len(data['data'])) + '\n')
-# print(str(data['data'][0]) + '\n')
-# print(str(data['data'][1]) + '\n')
-# print(str(data['data'][2]) + '\n')
-# print(str(data['data'][3]) + '\n')
-# print(str(data['data'][4]) + '\n')
-# print(str(data['data'][5]))
 
 # save data to the database
 db.insert_response_status(conn, data['status']) # store response status
 
 # store currency info
 currency_count = str(len(data['data']))
-s = 'storing ' + currency_count + ' currency entries'
+s = 'saving ' + currency_count + ' currency entries'
 log.log(s)
 print(s)
 error_occurred = False
 for c in data['data']:
-    # print(str(c) + '\n')
-    success = db.save_currency(conn, c)
+    success = db.save_currency(conn, c) # success used to track if an error occurred during save.
     if (not success):
         error_occurred = True
 if (error_occurred):
-    s = 'ERROR - one or more errors occurred during saving to currency table, please check the log for details'
+    s = 'ERROR: one or more errors occurred during saving to currency table, please check the log for details'
     log.log(s)
     print(s)
+else:
+    s = 'saving to currency table completed successfully'
+    log.log(s)
+    print(s)
+
 # by now we should have a currency added for each quote. Store the quote info.
 # TODO: store quote info
+# TODO: fix this little bug later on next line
+s = 'saving {} quotes'.format(currency_count) # this is actually incorrect if using more than one quote per currency call. EX: convert: USD, CAD
+log.log(s)
+print(s)
+error_occurred = False
+
+for q in data['data']:
+    success = db.save_quote(conn, q) # success used to track if an error occurred during save.
+    if (not success):
+        error_occurred = True
+
+if (error_occurred):
+    s = 'ERROR: one or more errors occurred during saving to quote table, please check the log for details'
+    log.log(s)
+    print(s)
+
+else:
+    s = 'saving to quote table completed successfully'
+    log.log(s)
+    print(s)
 
 db.close_db_connection(conn) # close db connection
 
 # End program
-s = 'Program Completed'
+s = 'Program Complete'
 log.log(s)
 print(s)
 

@@ -16,11 +16,13 @@ def open_db_connection():
     try:
         conn = sqlite3.connect(database_path)
         log.log('connected to database')
+
     except:
         s = 'ERROR: Error connecting to database'
         log.log(s)
         print(s)
         exit() # quit the program if we cannot connect to the database
+
     return conn
 
 
@@ -30,6 +32,7 @@ def close_db_connection(conn):
     try:
         conn.close()
         log.log('closed connection to database')
+
     except:
         s = 'ERROR: Error closing connection to database'
         log.log(s)
@@ -42,6 +45,7 @@ def create_tables(conn):
     log.log('verifing tables are setup')
     c = conn.cursor()
     # create response_status table
+
     try:
         c.execute("""
             CREATE TABLE IF NOT EXISTS response_status (
@@ -54,12 +58,14 @@ def create_tables(conn):
                 insert_date NUMERIC
             )
         """)    
-        log.log('response_status table is setup (created or already exists)')
+        log.log('response_status table is setup')
+
     except:
         s = 'ERROR: Error creating response_status table'
         log.log(s)
         print(s)
         exit() # end the program here if tables are not setup
+
     try:
         c.execute('''
             CREATE TABLE IF NOT EXISTS currency (
@@ -75,16 +81,19 @@ def create_tables(conn):
                 insert_date NUMERIC
             )
         ''')
-        log.log('currency table is setup (created or already exists)')
+        log.log('currency table is setup')
+
     except:
         s = 'ERROR: Error creating currency table'
         log.log(s)
         print(s)
         exit() # end the program here if tables are not setup
+
     try:
         c.execute('''
             CREATE TABLE IF NOT EXISTS quote (
                 id INTEGER,
+                symbol TEXT,
                 currency_base TEXT,
                 insert_date NUMERIC,
                 price NUMERIC,
@@ -101,14 +110,17 @@ def create_tables(conn):
                 last_updated_cmc NUMERIC
             )
         ''')
-        log.log('quote table is setup (created or already exists)')
+        log.log('quote table is setup')
+
     except:
         s = 'ERROR: Error creating quote table'
         log.log(s)
         print(s)
         exit() # end the program here if tables are not setup
+
     try:
         conn.commit() # commit the changes
+
     except:
         s = 'ERROR: Error commiting table setup changes'
         log.log(s)
@@ -118,6 +130,7 @@ def create_tables(conn):
 
 
 def insert_response_status(conn, d):
+
     log.log('inserting response status into db')
     data_tuple = (
         d['timestamp'],
@@ -141,10 +154,12 @@ def insert_response_status(conn, d):
         VALUES (?, ?, ?, ?, ?, ?, ?);
     '''
     c = conn.cursor()
+
     try:
         c.execute(sql, data_tuple)
         conn.commit()
         log.log('response status successfully inserted into db')
+
     except:
         s = 'ERROR: Error inserting into response_status table. Please investigate!'
         log.log(s)
@@ -156,6 +171,10 @@ def insert_response_status(conn, d):
 def save_currency(conn, d):
     # if currency doesn't exist yet, then INSERT it.
     # if it exists then UPDATE any data that has changed on it.
+    # expects a return value of True or False.
+    # if successful return True
+    # if error return False
+
     # setup cursor
     c = conn.cursor()
 
@@ -202,18 +221,22 @@ def save_currency(conn, d):
             # slug has changed, include it in the UPDATE
             sql += 'slug = ?, '
             data_tuple += (d['slug'],) # adding a tuple member to the list
+
         if (select_result[0][4] != d['cmc_rank']):
             # cmc_rank has changed, include it in the UPDATE
             sql += 'cmc_rank = ?, '
             data_tuple += (d['cmc_rank'],)
+
         if (select_result[0][5] != d['num_market_pairs']):
             # num_market_pairs has changed, include it in the UPDATE
             sql += 'num_market_pairs = ?, '
             data_tuple += (d['num_market_pairs'],)
+
         if (select_result[0][6] != d['infinite_supply']):
             # infinite_supply has changed, include it in the UPDATE
             sql += 'infinite_supply = ?, '
             data_tuple += (d['infinite_supply'],)
+
         # include the two columns that will be updated no matter what
         sql += 'last_updated_cmc = ?, last_update = ? WHERE id = ?'
         data_tuple += (d['last_updated'],str(datetime.now()),d['id'])
@@ -221,11 +244,13 @@ def save_currency(conn, d):
         # log.log('NEW values: ' + str(d['id']) + ) We could list out ALL the new values, but that will take a lot of log space. Only going to include the UPDATE statement for now.
         log.log('SQL statement: ' + sql)
         log.log('DATA: ' + str(data_tuple))
+
         try:
             c.execute(sql, data_tuple)
             conn.commit()
             log.log('currency ID {} successfully updated in db'.format(d['id']))
             return True # No error occurred
+        
         except:
             s = 'ERROR: Error updating currency ID {} into currency table. Please investigate!'.format(d['id'])
             log.log(s)
@@ -264,14 +289,114 @@ def save_currency(conn, d):
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         '''
+
         try:
             c.execute(sql, data_tuple)
             conn.commit()
             log.log('currency ID ' + str(d['id']) + ' (' + str(d['name']) + ') successfully inserted into currency table')
             return True # used to track errors.
+        
         except:
             s = 'ERROR: Error inserting currency ID ' + str(d['id']) + ' (' + str(d['name']) + ') into currency table. Please investigate!'
             log.log(s)
             log.log('Data Dump: ' + str(d)) # dump the data into the log for later review
             print(s)
             return False # used to track if an error occurred.
+        
+
+
+def save_quote(conn, d):
+    # expects a return value
+    # if successful return True
+    # if error return False
+
+    # setup cursor
+    cur = conn.cursor()
+
+    err = False # for error tracking in the for loop, so we know how to return.
+
+    # the only thing we should be doing here is INSERT, no need for any updating.
+    # for each currency, we will need to add an entry.
+    currency_list = list(d['quote'].keys()) # d quote's value is it's own dictionary. Need the name of each key in it.
+    # print(currency_list)
+
+    for c in currency_list:
+        
+        single_quote_error = False # for tracking only one quote at a time.
+
+        # add 3 missing dictionary key value pairs if in Sandbox environment:
+        if (config.cmc_environment['environment'] == 'sandbox'):
+            d['quote'][c]['percent_change_30d'] = 4.839483
+            d['quote'][c]['percent_change_60d'] = -8.22839
+            d['quote'][c]['percent_change_90d'] = 0.384733
+
+        # for each currency base, setup the data and add an entry:
+        try:
+            data_tuple = (
+                d['id'],
+                d['symbol'],
+                c, # currency_base
+                str(datetime.now()), # insert_date
+                d['quote'][c]['price'],
+                d['quote'][c]['volume_24h'],
+                d['quote'][c]['volume_change_24h'],
+                d['quote'][c]['percent_change_1h'],
+                d['quote'][c]['percent_change_24h'],
+                d['quote'][c]['percent_change_7d'],
+                d['quote'][c]['percent_change_30d'],
+                d['quote'][c]['percent_change_60d'],
+                d['quote'][c]['percent_change_90d'],
+                d['quote'][c]['market_cap'],
+                d['quote'][c]['market_cap_dominance'],
+                d['quote'][c]['last_updated'] # last_updated_cmc
+            )
+        
+        except:
+            s = 'ERROR: failed to setup data_tuple properly for this quote. ID: {} currency_base: {}. Please investigate.'.format(d['id'],c)
+            log.log(s)
+            log.log('Data Dump: ' + str(d))
+            print(s)
+            err = True # error occurred for this quote
+            single_quote_error = True
+
+        sql = '''
+            INSERT INTO quote (
+                id,
+                symbol,
+                currency_base,
+                insert_date,
+                price,
+                volume_24h,
+                volume_change_24h,
+                percent_change_1h,
+                percent_change_24h,
+                percent_change_7d,
+                percent_change_30d,
+                percent_change_60d,
+                percent_change_90d,
+                market_cap,
+                market_cap_dominance,
+                last_updated_cmc
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        '''
+
+        # if error already occured, don't even try to insert
+        if (not single_quote_error):
+
+            try:
+                cur.execute(sql, data_tuple)
+                conn.commit()
+                log.log('quote for ID: {} {} successfully inserted into quote table.'.format(d['id'], c))
+            
+            except Exception as ex:
+                s = 'ERROR: Error inserting quote for ID: {} {}. {}'.format(d['id'], c, ex)
+                log.log(s)
+                log.log('Data Dump: ' + str(d)) # dump the data into the log for later review
+                print(s)
+                err = True # used to track if an error occurred.
+        
+    if (err):
+        return False # there was an error
+    else:
+        return True

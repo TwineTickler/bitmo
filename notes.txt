@@ -111,3 +111,15 @@ CREATE TABLE IF NOT EXISTS quote (
 9. Write the data to the database 
 
 
+Troubleshooting:
+
+# the following is only used for troubleshooting:
+# print(data['status'])
+# print(data['data'])
+# print('number of currencies is: ' + str(len(data['data'])) + '\n')
+# print(str(data['data'][0]) + '\n')
+# print(str(data['data'][1]) + '\n')
+# print(str(data['data'][2]) + '\n')
+# print(str(data['data'][3]) + '\n')
+# print(str(data['data'][4]) + '\n')
+# print(str(data['data'][5]))
