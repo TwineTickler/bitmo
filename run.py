@@ -29,12 +29,8 @@ log.log('connecting to Coin Market Cap using the ' + config.cmc_environment['env
 # set variables from config file:
 url = config.cmc_environment['url']
 APIkey = config.cmc_environment['APIkey']
+parameters = config.parameters
 
-parameters = {
-  'start':'1', # 1 is default so I don't believe this is needed.
-  'limit':'180',
-  'convert':'USD,CAD'
-}
 headers = {
   'Accepts': 'application/json',
   'X-CMC_PRO_API_KEY': APIkey,
@@ -49,7 +45,7 @@ try:
     data = json.loads(response.text)
     log.log(str(data['status']))
     # print(data)
-    
+
 except (ConnectionError, Timeout, TooManyRedirects) as e:
     log.log(e)
     print(e)

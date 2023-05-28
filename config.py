@@ -20,6 +20,12 @@ API_key_file_name = '/' + 'CMCApiKey.txt'
 environment = 'sandbox'
 # environment = 'production'
 
+parameters = {
+  'start':'1', # 1 is default so I don't believe this is needed.
+  'limit':'180', # how many currencies do you want returned.
+  'convert':'USD' # comma separated list of what currency bases you'd like these returned in. ('USD,CAD,JPY,')
+}
+
 if (environment == 'sandbox'):
     cmc_environment = {
         'environment': environment,
