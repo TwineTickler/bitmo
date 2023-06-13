@@ -2,10 +2,14 @@
 #        - quote data from coin market cap API
 #
 # parameters:
-#        - 
+#        - start
+#             Same as the parameter['start'] set in config file.
+#             This should be different each time through the loop (if using the loop)
 #
-#
-#
+# returns:
+#        - data['status']['credit_count']
+#             number of credits it took to complete the request (from the API)
+#             we want to know when it reaches 0, because that is when there are no more currencies to save
 
 import config
 import log
@@ -14,7 +18,7 @@ import json
 from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
 
-def get_quote():
+def get_quote(start):
 
     # Verify Database is connected and setup:
     conn = db.open_db_connection() # open db connection
@@ -28,6 +32,9 @@ def get_quote():
     'Accepts': 'application/json',
     'X-CMC_PRO_API_KEY': APIkey,
     }
+
+    parameters['start'] = start # override start parameter with what is sent via the loop.
+
     session = Session()
     session.headers.update(headers)
 
@@ -100,3 +107,7 @@ def get_quote():
         print(s)
 
     db.close_db_connection(conn) # close db connection
+
+    # all the other errors should have already been handled at this point.
+    # so we should return a valid integer here.
+    return data['status']['credit_count']

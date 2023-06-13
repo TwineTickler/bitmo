@@ -35,21 +35,44 @@ while not stop_loop:
     print(s)
 
     # TODO Connect to the API and grab the data.
+    credit_count = get_quote.get_quote(parameters['start'])
+    s = 'credits used for last API call: {}'.format(credit_count)
+    log.log(s)
+    print(s)
 
+    # in prod: when credit_count = 0, then we can stop.
+    # in sandbox: credit_count IS ALWAYS 1, so we'll have to simulate it changing to 0.
+
+    if (loop_iteration == 5 and config.environment == 'sandbox'):  # using for sandbox, to stop the loop
+        s = 'manually setting credit_count to 0 for sandbox environment to stop the loop'
+        log.log(s)
+        credit_count = 0
+
+    # stop the loop if we reach the end of currency list
+    if (credit_count == 0):
+        log.log('credit_count set to 0, ending the loop')
+        stop_loop = True
+    
+    if (loop_iteration == 7): # using only for DEV for when starting prod testing. (scared to go over)
+        stop_loop = True
+
+    # set the start parameter for next loop iteration.
     parameters['start'] = str(int(parameters['limit']) + int(parameters['start']))
 
-    loop_iteration += 1
-    if (loop_iteration == 5):
+    if (loop_iteration == 1000): # using this as a fail safe to stop an infinite loop
+        s = 'ERROR: Infinite Loop fail safe triggered. Investigate to find the cause.'
+        log.log(s)
+        print(s)
         stop_loop = True
 
     # if loop is only supposed to occur once based off config settings:
     if (config.all_or_some == 0):
+        s = 'config.all_or_some is set to 0, so only running the loop once.'
+        log.log(s)
+        print(s)
         stop_loop = True
 
-# TODO: move out API call to a separate file to make things easier to read in this new loop
-
-# TODO: move this inside the loop
-get_quote.get_quote() # will need to send start and limit parameters based off the loop (possibly more)
+    loop_iteration += 1
 
 # End program
 s = 'Program Complete'

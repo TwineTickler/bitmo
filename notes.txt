@@ -132,4 +132,6 @@ Troubleshooting:
 11. create some kind of infinite (not really infinite) loop that only runs the downloads once a day.
     - In progress
 
-12. once the downloads are done. create functions to begin looking at trends.
+12. Setup to run once a day.
+
+13. once the downloads are done. create functions to begin looking at trends.
