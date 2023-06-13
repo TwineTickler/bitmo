@@ -1,3 +1,36 @@
+HOW TO (Developers):
+
+To make changes to the DB:
+
+    Add this code to db.py on line 41 (after close connection function):
+    And of course you can change your SQL in this block.
+
+def alter_db(conn):
+    c = conn.cursor()
+    try:
+        c.execute("""
+
+        ALTER TABLE quote
+        ADD cmc_rank INTEGER
+        
+        """)
+        close_db_connection(conn)
+    except Exception as e:
+        print(e)
+
+Then add this code to run.py on line 15 after the import statements:
+
+import db
+conn = db.open_db_connection()
+db.alter_db(conn)
+exit()
+
+Select your environment (aka, database name), and run once. Then revert changes.
+
+
+#########################################################################################################
+
+
 TODO:
 
 1. Create a logging script - DONE
@@ -132,6 +165,13 @@ Troubleshooting:
 11. create some kind of infinite (not really infinite) loop that only runs the downloads once a day.
     - In progress
 
-12. Setup to run once a day.
+12. Add total_count to response_status in DB. <-- done. Need to test in PROD
 
-13. once the downloads are done. create functions to begin looking at trends.
+ALTER TABLE response_status
+ADD total_count INTEGER 
+
+13. Add cmc_rank AND num_market_pairs from currency table to the quotes table as well. <-- Done! Need to test in PROD
+
+14. Setup to run once a day.
+
+15. once the downloads are done. create functions to begin looking at trends.

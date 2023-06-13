@@ -55,6 +55,10 @@ def get_quote(start):
         print(s)
         exit() # end the program here.
 
+    # if sandbox, then we need to simulate a missing header key
+    if (config.environment == 'sandbox'):
+        data['status']['total_count'] = 0
+
     # save data to the database
     db.insert_response_status(conn, data['status']) # store response status
 
@@ -65,44 +69,57 @@ def get_quote(start):
         print(s)
         exit()
 
+
+
     # store currency info
-    currency_count = str(len(data['data']))
-    s = 'saving ' + currency_count + ' currency entries'
-    log.log(s)
-    print(s)
-    error_occurred = False
-    for c in data['data']:
-        success = db.save_currency(conn, c) # success used to track if an error occurred during save.
-        if (not success):
-            error_occurred = True
-    if (error_occurred):
-        s = 'ERROR: one or more errors occurred during saving to currency table, please check the log for details'
+
+    currency_count = len(data['data'])
+
+    # if there are zero entries, then we do not need to save anything.
+    if (currency_count > 0):
+
+        s = 'saving ' + str(currency_count) + ' currency entries'
         log.log(s)
         print(s)
-    else:
-        s = 'saving to currency table completed successfully'
+        error_occurred = False
+
+        for c in data['data']:
+            success = db.save_currency(conn, c) # success used to track if an error occurred during save.
+            if (not success):
+                error_occurred = True
+        if (error_occurred):
+            s = 'ERROR: one or more errors occurred during saving to currency table, please check the log for details'
+            log.log(s)
+            print(s)
+        else:
+            s = 'saving to currency table completed successfully'
+            log.log(s)
+            print(s)
+
+        # by now we should have a currency added for each quote. Store the quote info.
+        # TODO: fix this little bug later on next line
+        s = 'saving {} quotes'.format(currency_count) # this is actually incorrect if using more than one quote per currency call. EX: convert: USD, CAD
         log.log(s)
         print(s)
+        error_occurred = False
 
-    # by now we should have a currency added for each quote. Store the quote info.
-    # TODO: fix this little bug later on next line
-    s = 'saving {} quotes'.format(currency_count) # this is actually incorrect if using more than one quote per currency call. EX: convert: USD, CAD
-    log.log(s)
-    print(s)
-    error_occurred = False
+        for q in data['data']:
+            success = db.save_quote(conn, q) # success used to track if an error occurred during save.
+            if (not success):
+                error_occurred = True
 
-    for q in data['data']:
-        success = db.save_quote(conn, q) # success used to track if an error occurred during save.
-        if (not success):
-            error_occurred = True
+        if (error_occurred):
+            s = 'ERROR: one or more errors occurred during saving to quote table, please check the log for details'
+            log.log(s)
+            print(s)
 
-    if (error_occurred):
-        s = 'ERROR: one or more errors occurred during saving to quote table, please check the log for details'
-        log.log(s)
-        print(s)
+        else:
+            s = 'saving to quote table completed successfully'
+            log.log(s)
+            print(s)
 
-    else:
-        s = 'saving to quote table completed successfully'
+    else: # no data to save
+        s = 'no currencies returned'
         log.log(s)
         print(s)
 

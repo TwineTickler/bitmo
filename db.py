@@ -42,7 +42,7 @@ def close_db_connection(conn):
 
 def create_tables(conn):
     # create the tables we need if they do not already exist
-    log.log('verifing tables are setup')
+    log.log('verifying tables are setup')
     c = conn.cursor()
     # create response_status table
 
@@ -54,6 +54,7 @@ def create_tables(conn):
                 error_message TEXT,
                 elapsed INTEGER,
                 credit_count INTEGER,
+                total_count INTEGER,
                 endpoint TEXT,
                 insert_date NUMERIC
             )
@@ -107,7 +108,9 @@ def create_tables(conn):
                 percent_change_90d NUMERIC,
                 market_cap NUMERIC,
                 market_cap_dominance NUMERIC,
-                last_updated_cmc NUMERIC
+                last_updated_cmc NUMERIC,
+                cmc_rank INTEGER,
+                num_market_pairs INTEGER
             )
         ''')
         log.log('quote table is setup')
@@ -138,6 +141,7 @@ def insert_response_status(conn, d):
         d['error_message'],
         d['elapsed'],
         d['credit_count'],
+        d['total_count'],
         '/v1/cryptocurrency/listings/latest', # hard coding this for now until we begin using another endpoint
         str(datetime.now()) # insert_date
     )
@@ -147,11 +151,12 @@ def insert_response_status(conn, d):
             error_code, 
             error_message, 
             elapsed, 
-            credit_count, 
+            credit_count,
+            total_count, 
             endpoint, 
             insert_date
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
     '''
     c = conn.cursor()
 
@@ -160,8 +165,8 @@ def insert_response_status(conn, d):
         conn.commit()
         log.log('response status successfully inserted into db')
 
-    except:
-        s = 'ERROR: Error inserting into response_status table. Please investigate!'
+    except Exception as e:
+        s = 'ERROR: Error inserting into response_status table: {}'.format(e)
         log.log(s)
         log.log('Data Dump: ' + str(d)) # Data dumped into Log, needs investigation why it could not be inserted into DB
         print(s)
@@ -171,7 +176,7 @@ def insert_response_status(conn, d):
 def save_currency(conn, d):
     # if currency doesn't exist yet, then INSERT it.
     # if it exists then UPDATE any data that has changed on it.
-    # expects a return value of True or False.
+    # should return with True or False.
     # if successful return True
     # if error return False
 
@@ -180,30 +185,17 @@ def save_currency(conn, d):
 
     # run a select to see if it exists
     sql = 'SELECT * FROM currency where id = {};'.format(d['id']) # try to select the ID of the currency
-    # sql = 'SELECT * FROM currency where id = 252' # used for testing
-    # d['id'] = 252 # used for testing
     c.execute(sql)
     select_result = c.fetchall()
     # an example select_result:
     # [(252, 'w2cym56x6h', 'ov801b7pi1m', 'su6c1umozi', 8253, 7074, None, '2023-05-23T04:41:06.961Z', '2023-05-22 23:41:06.991538', '2023-05-22 23:41:06.991554')]
-    # print(select_result) # used for testing
 
     if (len(select_result) > 0):
         log.log('currency ID {} already exists, verify only 1 match returned and then UPDATE the record'.format(d['id']))
-        # print('one or more currency match found') # will remove this later after testing
         
         # lenth of the result SHOULD only be 1. If it's more than 1, throw an error.
         if (len(select_result) > 1):
             s = 'ERROR: the currency ID {} returned MORE than 1 result. The ID SHOULD be distinct in this table, please investigate'.format(d['id'])
-            log.log(s)
-            log.log('Data Dump: ' + str(d)) # dump the data into the log for later review
-            print(s)
-            return False # return with an error
-
-        # two fields SHOULD NOT change (name and symbol)
-        # If any of these two fields do not match, then throw an error and DO NOT UPDATE the record
-        if (select_result[0][1] != d['name'] or select_result[0][2] != d['symbol']):
-            s = 'ERROR: the currency ID {} does not match on either the NAME or SYMBOL field with what is in the db. These fields SHOULD NOT CHANGE. Please investiage'.format(d['id'])
             log.log(s)
             log.log('Data Dump: ' + str(d)) # dump the data into the log for later review
             print(s)
@@ -217,10 +209,26 @@ def save_currency(conn, d):
 
         # see which columns have changed and only update them.
         # and yes, technically, even if they have stayed the same we COULD have still updated them all, but this is a little cleaner.
+        if (select_result[0][1] != d['name']):
+            # name has changed, throw a WARNING and include it in the UPDATE
+            s = 'WARNING: name field is changing from {} --> {}'.format(select_result[0][1], d['name'])
+            log.log(s)
+            print(s)
+            sql += 'name = ?, '
+            data_tuple += (d['name'],)
+
+        if (select_result[0][2] != d['symbol']):
+            # symbol has changed, throw a WARNING and include it in the UPDATE
+            s = 'WARNING: symbol field is changing from {} --> {}'.format(select_result[0][2], d['symbol'])
+            log.log(s)
+            print(s)
+            sql += 'symbol = ?, '
+            data_tuple += (d['symbol'],)
+        
         if (select_result[0][3] != d['slug']):
             # slug has changed, include it in the UPDATE
             sql += 'slug = ?, '
-            data_tuple += (d['slug'],) # adding a tuple member to the list
+            data_tuple += (d['slug'],)
 
         if (select_result[0][4] != d['cmc_rank']):
             # cmc_rank has changed, include it in the UPDATE
@@ -294,7 +302,7 @@ def save_currency(conn, d):
             c.execute(sql, data_tuple)
             conn.commit()
             log.log('currency ID ' + str(d['id']) + ' (' + str(d['name']) + ') successfully inserted into currency table')
-            return True # used to track errors.
+            return True # used to track errors (True is no errors)
         
         except:
             s = 'ERROR: Error inserting currency ID ' + str(d['id']) + ' (' + str(d['name']) + ') into currency table. Please investigate!'
@@ -305,7 +313,8 @@ def save_currency(conn, d):
         
 
 
-def save_quote(conn, d):
+def save_quote(conn, d): 
+    # this is for a SINGLE QUOTE, to iterate through ALL of the quotes in ['data'] see the for loop in get_quote.py
     # expects a return value
     # if successful return True
     # if error return False
@@ -320,7 +329,7 @@ def save_quote(conn, d):
     currency_list = list(d['quote'].keys()) # d quote's value is it's own dictionary. Need the name of each key in it.
     # print(currency_list)
 
-    for c in currency_list:
+    for c in currency_list: # JUST iterating through each of the currencies for THIS quote.
         
         single_quote_error = False # for tracking only one quote at a time.
 
@@ -348,7 +357,9 @@ def save_quote(conn, d):
                 d['quote'][c]['percent_change_90d'],
                 d['quote'][c]['market_cap'],
                 d['quote'][c]['market_cap_dominance'],
-                d['quote'][c]['last_updated'] # last_updated_cmc
+                d['quote'][c]['last_updated'], # last_updated_cmc
+                d['num_market_pairs'],
+                d['cmc_rank']
             )
         
         except:
@@ -376,9 +387,11 @@ def save_quote(conn, d):
                 percent_change_90d,
                 market_cap,
                 market_cap_dominance,
-                last_updated_cmc
+                last_updated_cmc,
+                num_market_pairs,
+                cmc_rank
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         '''
 
         # if error already occured, don't even try to insert
