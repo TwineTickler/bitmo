@@ -123,3 +123,13 @@ Troubleshooting:
 # print(str(data['data'][3]) + '\n')
 # print(str(data['data'][4]) + '\n')
 # print(str(data['data'][5]))
+
+10. test production to see 
+    a. that everything saves correctly. - DONE
+    b. to see how expensive it is (cmc credits) to download all the listings, once a day.
+        - DONE: we can afford to get everything once per day.
+
+11. create some kind of infinite (not really infinite) loop that only runs the downloads once a day.
+    - In progress
+
+12. once the downloads are done. create functions to begin looking at trends.
