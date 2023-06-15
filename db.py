@@ -9,16 +9,20 @@ database_path = config.absolute_path + config.db_path + config.db_name # build t
 
 
 
-def open_db_connection():
+def open_db_connection(caller_is_run=True):
+    l = '' # request is coming from run.py (change nothing in the log output)
+    if (not caller_is_run):
+        l = 'TIMER: '
+
     # Connect to the database
-    log.log('database is: ' + database_path)
+    log.log(l + 'database is: ' + database_path)
 
     try:
         conn = sqlite3.connect(database_path)
-        log.log('connected to database')
+        log.log(l + 'connected to database')
 
     except:
-        s = 'ERROR: Error connecting to database'
+        s = l + 'ERROR: Error connecting to database'
         log.log(s)
         print(s)
         exit() # quit the program if we cannot connect to the database
@@ -40,9 +44,14 @@ def close_db_connection(conn):
 
 
 
-def create_tables(conn):
+def create_tables(conn, caller_is_run=True):
+    l = ''
+
+    if (not caller_is_run): # caller is timer.py
+        l = 'TIMER: '
+
     # create the tables we need if they do not already exist
-    log.log('verifying tables are setup')
+    log.log(l + 'verifying tables are setup')
     c = conn.cursor()
     # create response_status table
 
@@ -59,10 +68,10 @@ def create_tables(conn):
                 insert_date NUMERIC
             )
         """)    
-        log.log('response_status table is setup')
+        log.log(l + 'response_status table is setup')
 
     except:
-        s = 'ERROR: Error creating response_status table'
+        s = l + 'ERROR: Error creating response_status table'
         log.log(s)
         print(s)
         exit() # end the program here if tables are not setup
@@ -82,10 +91,10 @@ def create_tables(conn):
                 insert_date NUMERIC
             )
         ''')
-        log.log('currency table is setup')
+        log.log(l + 'currency table is setup')
 
     except:
-        s = 'ERROR: Error creating currency table'
+        s = l + 'ERROR: Error creating currency table'
         log.log(s)
         print(s)
         exit() # end the program here if tables are not setup
@@ -113,10 +122,10 @@ def create_tables(conn):
                 num_market_pairs INTEGER
             )
         ''')
-        log.log('quote table is setup')
+        log.log(l + 'quote table is setup')
 
     except:
-        s = 'ERROR: Error creating quote table'
+        s = l + 'ERROR: Error creating quote table'
         log.log(s)
         print(s)
         exit() # end the program here if tables are not setup
@@ -125,7 +134,7 @@ def create_tables(conn):
         conn.commit() # commit the changes
 
     except:
-        s = 'ERROR: Error commiting table setup changes'
+        s = l + 'ERROR: Error commiting table setup changes'
         log.log(s)
         print(s)
         exit() # end the program here if tables are not setup
@@ -413,3 +422,48 @@ def save_quote(conn, d):
         return False # there was an error
     else:
         return True
+    
+
+
+def get_latest_response_time(conn):
+    # only expected to be called by the TIMER.py file
+    l = 'TIMER: '
+    # get the most recent entry in the database from a successful API call
+    # (which resulted in saving some kind of currency info into the db)
+    # should be able to get most recent response_status with:
+    #    error_code = 0
+    #    credit_count > 0
+    #
+    # needs to return the insert_date
+
+    log.log(l + 'getting latest response time')
+
+    # setup cursor
+    c = conn.cursor()
+
+    # run a select to see if it exists
+    sql = '''
+        SELECT insert_date 
+            FROM response_status 
+                WHERE error_code = 0 AND credit_count > 0
+                    ORDER BY insert_date DESC
+                        LIMIT 1;
+    '''
+    # Example return value: [('2023-06-14 23:13:05.708869',)]
+
+    try:
+        c.execute(sql)
+        select_result = c.fetchall()
+        # print(select_result)
+        log.log(l + 'SQL return value is: ' + str(select_result))
+
+    except Exception as e:
+        s = l + 'ERROR: {}'.format(e)
+        log.log(s)
+        print(s)
+        s = l + 'This error is not acceptable. Terminating program early.'
+        log.log(s)
+        print(s)
+        exit()
+
+    return select_result

@@ -165,13 +165,23 @@ Troubleshooting:
 11. create some kind of infinite (not really infinite) loop that only runs the downloads once a day.
     - In progress
 
-12. Add total_count to response_status in DB. <-- done. Need to test in PROD
+12. Add total_count to response_status in DB. <-- done.
 
 ALTER TABLE response_status
 ADD total_count INTEGER 
 
-13. Add cmc_rank AND num_market_pairs from currency table to the quotes table as well. <-- Done! Need to test in PROD
+13. Add cmc_rank AND num_market_pairs from currency table to the quotes table as well. <-- Done!
 
 14. Setup to run once a day.
+
+How to make this work:
+- Run at 8:00 PM Central every day. (nothing much going on)
+- Program run constently:
+    - checks in every hour
+    - then begins count down to run time.
+    - every hour verifies when the latest entries were made to the database and confirms:
+        - 8:00 PM will be between 23 and 25 hours since last insert.
+            - If it has been LONGER than 25 hours, run immediately.
+            - If less: run in 23 hours SINCE last run.
 
 15. once the downloads are done. create functions to begin looking at trends.

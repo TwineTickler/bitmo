@@ -7,23 +7,37 @@ import os
 from datetime import datetime
 
 # set global variables
-full_log_path =  config.absolute_path + config.log_path
+full_log_path = config.absolute_path + config.log_path
+
+
 
 # if Log path does not exist, then create it.
-def check_log_path():
-    if (not os.path.exists(full_log_path)):
-        # path missing, (can't log it because we don't have a log folder yet)
-        # create it
-        os.mkdir(full_log_path)
-        # beginning a new session
-        log('     -----     BEGINNING NEW SESSION     -----')
-        # path created. log it
-        log('log path created')
-    else:
-        # beginning a new session
-        log('     -----     BEGINNING NEW SESSION     -----')
-        # log that path already exists
-        log('log path already exists')
+def check_log_path(caller_is_run=True):
+
+    if (caller_is_run): # caller is run.py
+
+        if (not os.path.exists(full_log_path)):
+            # path missing, (can't log it because we don't have a log folder yet)
+            # create it
+            os.mkdir(full_log_path)
+            # beginning a new session
+            log('     -----     BEGINNING NEW SESSION     -----')
+            # path created. log it
+            log('log path created')
+
+        else:
+            # beginning a new session
+            log('     -----     BEGINNING NEW SESSION     -----')
+            # log that path already exists
+            log('log path already exists')
+
+    else: # being called by timer.py
+       
+        if (not os.path.exists(full_log_path)): # if the path doesn't exist then create it.
+            os.mkdir(full_log_path)
+            log('TIMER: log path created')
+
+
 
 def log(message):
     # determine which file to use. If current log file exists then use it, if not, then create one.

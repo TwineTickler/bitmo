@@ -13,8 +13,7 @@ import config
 import log
 import get_quote
 
-# If log path doesn't exist, then create it.
-log.check_log_path()
+log.check_log_path() # If log path doesn't exist, then create it.
 
 # create a loop that cycles through the start parameters until we don't find any more results (use any credits)
 # first loop should retrieve 5,000 results
