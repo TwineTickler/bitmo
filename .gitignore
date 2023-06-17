@@ -8,3 +8,7 @@ CMCApiKey.txt
 # unknown files (git required I believe)
 .DS_Store
 __pycache__/
+
+# folders and files created when testing automator
+autorun.workflow/
+config.pyc
