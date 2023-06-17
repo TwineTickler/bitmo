@@ -6,9 +6,17 @@ import db
 import pandas as pd
 from datetime import datetime
 
+target_run_time = 21 # should be an integer from 0 - 23 representing the hour at which you'd like to run the API call.
+
 log.check_log_path(False) # If log path doesn't exist, then create it.
 l = 'TIMER: ' # setting log prefix for this file (timer.py)
 log.log(l + '--- STARTING NEW TIMER SESSION ---')
+
+if (not (0 <= target_run_time <= 23)):
+    s = 'target_run_time variable NOT setup correctly. Stopping program.'
+    log.log(l + s)
+    print(s)
+    exit()
 
 ##############################################   Define Functions  #############################################
 
@@ -16,6 +24,7 @@ log.log(l + '--- STARTING NEW TIMER SESSION ---')
 def run_API_program():
     # Runs the main API get_quote program.
     # Returns the current Datetime
+    # always call this while assigning to the latest_insert_date variable because we need that variable to always be updated to the most recent date.
 
     with open('run.py') as f:
         exec(f.read())
@@ -42,6 +51,19 @@ def format_timedelta(delta) -> str:
         return f"{days} day{suffix} {time_fmt}"
 
     return time_fmt
+
+
+def get_datetime_of_next_API_call():
+
+    # uses the target_run_time and the time_since_last_run_hours to determine when should be the next API call.
+    # returns the datetime of next API call.
+    # should only be called when ever the hours are 24 or less.
+
+    # TODO
+
+    return_datetime = 0
+
+    return return_datetime
 
 
 ############################################## Begin runtime logic #############################################
@@ -89,13 +111,22 @@ log.log(l + s)
 print(s)
 
 # get the hours, rounded to nearest. (eaiest way was to use a pandas timedelta)
+# explaination: sending timedelta to a pandas timedelta, then rounding on the hour, then getting total seconds, dividing by 3600 and converting to an int.
 time_since_last_run_hours = (int((pd.Timedelta(time_since_last_run).round(freq='H')).total_seconds() / 3600))
 log.log(l + 'time since last run in rounded hours: ' + str(time_since_last_run_hours))
 
-#time_since_rounded_hour = get_rounded_hour(time_since_last_run)
-#print('Time since with rounded hour: ' + str(time_since_rounded_hour))
-
 # determine the next time to run an API call.
+if (time_since_last_run_hours >= 24):
+
+    # run the API call now
+    latest_insert_date = run_API_program()
+
+else:
+
+    next_API_target_datetime = get_datetime_of_next_API_call()
+    print(next_API_target_datetime)
+    # TODO
+
 
 '''
 When to run an API call?
@@ -107,13 +138,14 @@ based off 3 things:
 
 If hour is:
 
-    less than or equal to 24:
+    less than 24:
         If hour 24 is 9:00 PM -> then at 9:00 PM
-        If hour 24 is anything else -> then at hour 25
+        If hour 24 is anything else -> then at hour 23
 
         Ex:
             Time Since: 6 hours (rounded)
                 Current Time: 4:00 PM
+
 
                 Current Time: 11:00 PM
 
@@ -140,30 +172,8 @@ If hour is:
 
                 Current Time: 9:00 PM
 
-    greater than 24:
+    equal to or greater than 24:
         Run now
-
-        Ex:
-            Time Since: 25 hours (rounded)
-                Current Time: 4:00 PM
-
-                Current Time: 11:00 PM
-
-                Current Time: 9:00 PM
-            
-            Time Since: 30 hours
-                Current Time: 4:00 PM
-
-                Current Time: 11:00 PM
-
-                Current Time: 9:00 PM
-
-            Time Since: 72 hours
-                Current Time: 4:00 PM
-
-                Current Time: 11:00 PM
-
-                Current Time: 9:00 PM
 
 
 '''
