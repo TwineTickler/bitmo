@@ -3,6 +3,7 @@ print('beginning timer...')
 
 import log
 import db
+import pandas as pd
 from datetime import datetime
 
 log.check_log_path(False) # If log path doesn't exist, then create it.
@@ -41,7 +42,6 @@ def format_timedelta(delta) -> str:
         return f"{days} day{suffix} {time_fmt}"
 
     return time_fmt
-
 
 
 ############################################## Begin runtime logic #############################################
@@ -88,3 +88,82 @@ s = 'It has been -   {}   - since the last API call'.format(format_timedelta(tim
 log.log(l + s)
 print(s)
 
+# get the hours, rounded to nearest. (eaiest way was to use a pandas timedelta)
+time_since_last_run_hours = (int((pd.Timedelta(time_since_last_run).round(freq='H')).total_seconds() / 3600))
+log.log(l + 'time since last run in rounded hours: ' + str(time_since_last_run_hours))
+
+#time_since_rounded_hour = get_rounded_hour(time_since_last_run)
+#print('Time since with rounded hour: ' + str(time_since_rounded_hour))
+
+# determine the next time to run an API call.
+
+'''
+When to run an API call?
+
+based off 3 things:
+    Target Time - currently 9:00 PM
+    Current Time
+    Time Since Last Call
+
+If hour is:
+
+    less than or equal to 24:
+        If hour 24 is 9:00 PM -> then at 9:00 PM
+        If hour 24 is anything else -> then at hour 25
+
+        Ex:
+            Time Since: 6 hours (rounded)
+                Current Time: 4:00 PM
+
+                Current Time: 11:00 PM
+
+                Current TIme: 9:00 PM
+
+            Time Since: 23 hours
+                Current Time: 4:00 PM
+
+                Current Time: 11:00 PM
+
+                Current Time: 9:00 PM
+
+            Time Since: 24 hours
+                Current Time: 4:00 PM
+
+                Current Time: 11:00 PM
+
+                Current Time: 9:00 PM
+
+            Time Since: 0 hours (less than 30 minutes)
+                Current Time: 4:00 PM
+
+                Current Time: 11:00 PM
+
+                Current Time: 9:00 PM
+
+    greater than 24:
+        Run now
+
+        Ex:
+            Time Since: 25 hours (rounded)
+                Current Time: 4:00 PM
+
+                Current Time: 11:00 PM
+
+                Current Time: 9:00 PM
+            
+            Time Since: 30 hours
+                Current Time: 4:00 PM
+
+                Current Time: 11:00 PM
+
+                Current Time: 9:00 PM
+
+            Time Since: 72 hours
+                Current Time: 4:00 PM
+
+                Current Time: 11:00 PM
+
+                Current Time: 9:00 PM
+
+
+'''
