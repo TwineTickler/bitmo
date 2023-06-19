@@ -4,7 +4,9 @@ print('beginning timer...')
 import log
 import db
 import pandas as pd
+import time
 from datetime import datetime
+from datetime import timedelta
 
 target_run_time = 21 # should be an integer from 0 - 23 representing the hour at which you'd like to run the API call.
 
@@ -57,13 +59,60 @@ def get_datetime_of_next_API_call():
 
     # uses the target_run_time and the time_since_last_run_hours to determine when should be the next API call.
     # returns the datetime of next API call.
-    # should only be called when ever the hours are 24 or less.
+    # should only be called whenever the hours are less than 24.
+    # hours that qualify:
+    #   23
+    #   22
+    #   21
+    #   ...
+    #   2
+    #   1
+    #   0
 
-    # TODO
+    log.log(l + 'getting datetime of next API call...')
 
-    return_datetime = 0
+    hours_until_next_API_call = 23 - time_since_last_run_hours
+    log.log(l + 'hours until next API call = ' + str(hours_until_next_API_call))
+    run_now = False
 
-    return return_datetime
+    # if it's 23 hours since last run time, then run now UNLESS the current time is 1 hour before the desired target time.
+    # if that is the case then run it at the target_run_time (in 1 hour)
+
+    if (hours_until_next_API_call == 0):
+
+        # if current hour is 1 hour before the desired target time.
+        # now_hr + 1_hr = target_hour then run at target time.
+        now_plus_1hour = (datetime.now() + timedelta(hours=1))
+
+        if (now_plus_1hour.hour == target_run_time):
+
+            log.log(l + 'now + 1hr = {}'.format(now_plus_1hour.hour))
+            log.log(l + 'target_run_time: {}'.format(target_run_time))
+
+            # run at target_time
+            return_datetime = now_plus_1hour.replace(minute=0, second=0, microsecond=0)
+            # return_datetime = datetime.now().replace(hour=target_run_time, minute=0, second=0, microsecond=0)
+
+        else:
+
+            # run now
+            run_now = True
+            return_datetime = 0
+
+    else:
+
+        # set API call time based off 23 hours from last run.
+        # create a datetime that is based off the rounded hours, and then add 23 hours to it.
+        
+        time_of_last_run_rounded = pd.Timestamp(latest_insert_date).round(freq='H')
+        log.log(l + 'time of last run rounded: ' + str(time_of_last_run_rounded))
+        
+        target_datetime = time_of_last_run_rounded + pd.Timedelta(hours=23)
+        log.log(l + 'time of last run, +23 hours (new target): {}'.format(target_datetime))
+
+        return_datetime = target_datetime.to_pydatetime()
+
+    return run_now, return_datetime
 
 
 ############################################## Begin runtime logic #############################################
@@ -105,6 +154,7 @@ else:
 
 # first need to determine how far away that run time was from now.
 
+# print('latest_insert_date: ' + str(latest_insert_date))
 time_since_last_run = (datetime.now() - latest_insert_date)
 s = 'It has been -   {}   - since the last API call'.format(format_timedelta(time_since_last_run))
 log.log(l + s)
@@ -123,9 +173,56 @@ if (time_since_last_run_hours >= 24):
 
 else:
 
-    next_API_target_datetime = get_datetime_of_next_API_call()
-    print(next_API_target_datetime)
-    # TODO
+    runnow, next_API_runtime = get_datetime_of_next_API_call()
+    #print('runnow: ' + str(runnow))
+    #print('next API runtime: ' + str(next_API_runtime))
+    
+    if (runnow):
+
+        # run the API call now
+        s = 'runnow is True. Running API call now.'
+        log.log(l + s)
+        print(s)
+        latest_insert_date = run_API_program()
+    
+    else:
+
+        # target runtime established...
+        # loop the timer, until it's time to run...
+        s = 'next API runtime set: {}'.format(next_API_runtime)
+        log.log(l + s)
+        print(s)
+
+        continue_loop = True
+
+        while continue_loop:
+            
+            #TODO
+            # add 15 minute check intervals.
+
+            #TODO
+            # debug why it ran last night and stopped after 4 days of not running
+
+            # print('sleeping for 5 minutes...')
+            s = 'time is: {} - Next API call is at: {} - T minus {}'.format(datetime.now().strftime('%H:%M:%S'), next_API_runtime.strftime('%H:%M:%S'), (next_API_runtime - datetime.now()))
+            log.log(l + s)
+            print(s)
+            time.sleep(5)
+
+            # check if now is the correct hour to run the program.
+            if (next_API_runtime.hour == datetime.now().hour):
+                
+                # now is the target runtime. Run the program
+                s = 'target runtime is NOW. Running API call...'
+                log.log(l + s)
+                print(s)
+                latest_insert_date = run_API_program()
+
+                # get the runtime of next API call
+                s = 'next API runtime set: {}'.format(next_API_runtime)
+                log.log(l + s)
+                print(s)
+                runnow, next_API_runtime = get_datetime_of_next_API_call()
 
 
 '''
@@ -139,38 +236,54 @@ based off 3 things:
 If hour is:
 
     less than 24:
-        If hour 24 is 9:00 PM -> then at 9:00 PM
-        If hour 24 is anything else -> then at hour 23
+        If current hour is 9:00 PM -> then at 9:00 PM
+        If current hour is NOT 9:00 PM -> then at hour 23
 
         Ex:
             Time Since: 6 hours (rounded)
                 Current Time: 4:00 PM
-
+                    Last run: 10:00 AM
+                    Next run: + 23 hours since last run = 9:00 AM
+                    Next +1 run: + 23 hours since last run = 8:00 AM ... etc...
 
                 Current Time: 11:00 PM
+                    Last run: 5:00 PM
+                    Next run: 4:00 PM + 23 hours
+                    Next +1 run: 3:00 PM + 23 hours... etc...
 
-                Current TIme: 9:00 PM
+                Current Time: 9:00 PM
+                    Last run: 3:00 PM
+                    Next run: 2:00 PM + 23 hours... etc...
 
             Time Since: 23 hours
                 Current Time: 4:00 PM
+                    last run: 5:00 PM
+                    next run: NOW + 23 hours
+                    next run +1: 3:00 PM + 23 hours... etc...
 
                 Current Time: 11:00 PM
+                    last run: 12:00 AM
+                    next run: NOW + 23 hours
+                    next run +1: 10:00 PM + 23 hours... etc...
 
                 Current Time: 9:00 PM
-
-            Time Since: 24 hours
-                Current Time: 4:00 PM
-
-                Current Time: 11:00 PM
-
-                Current Time: 9:00 PM
+                    last run: 10:00 PM
+                    next run: NOW <-- run is 9:00 PM + 23 hours
+                    next run: +1: 9:00 PM + 24 hours
+                    next run: +2: 9:00 PM + 24 hours
 
             Time Since: 0 hours (less than 30 minutes)
                 Current Time: 4:00 PM
+                    last run: 4:00 PM
+                    next run: 3:00 PM + 23 hours
 
                 Current Time: 11:00 PM
+                    last run: 11:00 PM
+                    next run: 10:00 PM + 23 hours
 
                 Current Time: 9:00 PM
+                    last run: 9:00 PM
+                    next run: 9:00 PM + 24 hours
 
     equal to or greater than 24:
         Run now
