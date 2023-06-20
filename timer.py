@@ -55,6 +55,26 @@ def format_timedelta(delta) -> str:
     return time_fmt
 
 
+
+def get_time_since_last_run(lid):
+
+    # lid = latest_insert_date
+
+    # print('latest_insert_date: ' + str(latest_insert_date))
+    tslr = (datetime.now() - lid) # tslr = time since last run
+    s = 'It has been -   {}   - since the last API call'.format(format_timedelta(tslr))
+    log.log(l + s)
+    print(s)
+
+    # get the hours, rounded to nearest. (eaiest way was to use a pandas timedelta)
+    # explaination: sending timedelta to a pandas timedelta, then rounding on the hour, then getting total seconds, dividing by 3600 and converting to an int.
+    tslr_hours = (int((pd.Timedelta(tslr).round(freq='H')).total_seconds() / 3600))
+    log.log(l + 'time since last run in rounded hours: ' + str(tslr_hours))
+
+    return tslr, tslr_hours
+
+
+
 def get_datetime_of_next_API_call():
 
     # uses the target_run_time and the time_since_last_run_hours to determine when should be the next API call.
@@ -154,139 +174,88 @@ else:
 
 # first need to determine how far away that run time was from now.
 
+# get time since last run
+
+time_since_last_run, time_since_last_run_hours = get_time_since_last_run(latest_insert_date)
+
 # print('latest_insert_date: ' + str(latest_insert_date))
-time_since_last_run = (datetime.now() - latest_insert_date)
-s = 'It has been -   {}   - since the last API call'.format(format_timedelta(time_since_last_run))
-log.log(l + s)
-print(s)
+#time_since_last_run = (datetime.now() - latest_insert_date)
+#s = 'It has been -   {}   - since the last API call'.format(format_timedelta(time_since_last_run))
+#log.log(l + s)
+#print(s)
 
 # get the hours, rounded to nearest. (eaiest way was to use a pandas timedelta)
 # explaination: sending timedelta to a pandas timedelta, then rounding on the hour, then getting total seconds, dividing by 3600 and converting to an int.
-time_since_last_run_hours = (int((pd.Timedelta(time_since_last_run).round(freq='H')).total_seconds() / 3600))
-log.log(l + 'time since last run in rounded hours: ' + str(time_since_last_run_hours))
+#time_since_last_run_hours = (int((pd.Timedelta(time_since_last_run).round(freq='H')).total_seconds() / 3600))
+#log.log(l + 'time since last run in rounded hours: ' + str(time_since_last_run_hours))
 
 # determine the next time to run an API call.
 if (time_since_last_run_hours >= 24):
 
     # run the API call now
+    s = 'time since last run is 24 hours or greater. Running API call now.'
+    log.log(l + s)
+    print(s)
     latest_insert_date = run_API_program()
+    time_since_last_run, time_since_last_run_hours = get_time_since_last_run(latest_insert_date)
 
-else:
+#else:
 
-    runnow, next_API_runtime = get_datetime_of_next_API_call()
-    #print('runnow: ' + str(runnow))
-    #print('next API runtime: ' + str(next_API_runtime))
+
+runnow, next_API_runtime = get_datetime_of_next_API_call()
+#print('runnow: ' + str(runnow))
+#print('next API runtime: ' + str(next_API_runtime))
+
+if (runnow):
+
+    # run the API call now
+    s = 'runnow is True. Running API call now.'
+    log.log(l + s)
+    print(s)
+    latest_insert_date = run_API_program()
+    time_since_last_run, time_since_last_run_hours = get_time_since_last_run(latest_insert_date)
+
+#else:
+
+# target runtime established...
+# loop the timer, until it's time to run...
+s = 'next API runtime established: {}'.format(next_API_runtime)
+log.log(l + s)
+print(s)
+
+continue_loop = True
+
+while continue_loop:
     
-    if (runnow):
+    #TODO
+    # add 15 minute check intervals.
+    # print . every 3 min
 
-        # run the API call now
-        s = 'runnow is True. Running API call now.'
+    # get timer on track for every 3 minutes
+    # if minute % 3 != 0:
+        # get minute on track
+    # if second != 0:
+        # get second on track
+
+    # print('sleeping for 5 minutes...')
+    s = 'time is: {} - Next API call is at: {} - T minus {}'.format(datetime.now().strftime('%H:%M:%S'), next_API_runtime.strftime('%H:%M:%S'), (next_API_runtime - datetime.now()))
+    log.log(l + s)
+    print(s)
+    time.sleep(60)
+
+    # check if now is the correct hour to run the program.
+    if (next_API_runtime.hour == datetime.now().hour):
+        
+        # now is the target runtime. Run the program
+        s = 'target runtime is NOW. Running API call...'
         log.log(l + s)
         print(s)
         latest_insert_date = run_API_program()
-    
-    else:
+        time_since_last_run, time_since_last_run_hours = get_time_since_last_run(latest_insert_date)
 
-        # target runtime established...
-        # loop the timer, until it's time to run...
+        # get the runtime of next API call
         s = 'next API runtime set: {}'.format(next_API_runtime)
         log.log(l + s)
         print(s)
+        runnow, next_API_runtime = get_datetime_of_next_API_call()
 
-        continue_loop = True
-
-        while continue_loop:
-            
-            #TODO
-            # add 15 minute check intervals.
-
-            #TODO
-            # debug why it ran last night and stopped after 4 days of not running
-
-            # print('sleeping for 5 minutes...')
-            s = 'time is: {} - Next API call is at: {} - T minus {}'.format(datetime.now().strftime('%H:%M:%S'), next_API_runtime.strftime('%H:%M:%S'), (next_API_runtime - datetime.now()))
-            log.log(l + s)
-            print(s)
-            time.sleep(5)
-
-            # check if now is the correct hour to run the program.
-            if (next_API_runtime.hour == datetime.now().hour):
-                
-                # now is the target runtime. Run the program
-                s = 'target runtime is NOW. Running API call...'
-                log.log(l + s)
-                print(s)
-                latest_insert_date = run_API_program()
-
-                # get the runtime of next API call
-                s = 'next API runtime set: {}'.format(next_API_runtime)
-                log.log(l + s)
-                print(s)
-                runnow, next_API_runtime = get_datetime_of_next_API_call()
-
-
-'''
-When to run an API call?
-
-based off 3 things:
-    Target Time - currently 9:00 PM
-    Current Time
-    Time Since Last Call
-
-If hour is:
-
-    less than 24:
-        If current hour is 9:00 PM -> then at 9:00 PM
-        If current hour is NOT 9:00 PM -> then at hour 23
-
-        Ex:
-            Time Since: 6 hours (rounded)
-                Current Time: 4:00 PM
-                    Last run: 10:00 AM
-                    Next run: + 23 hours since last run = 9:00 AM
-                    Next +1 run: + 23 hours since last run = 8:00 AM ... etc...
-
-                Current Time: 11:00 PM
-                    Last run: 5:00 PM
-                    Next run: 4:00 PM + 23 hours
-                    Next +1 run: 3:00 PM + 23 hours... etc...
-
-                Current Time: 9:00 PM
-                    Last run: 3:00 PM
-                    Next run: 2:00 PM + 23 hours... etc...
-
-            Time Since: 23 hours
-                Current Time: 4:00 PM
-                    last run: 5:00 PM
-                    next run: NOW + 23 hours
-                    next run +1: 3:00 PM + 23 hours... etc...
-
-                Current Time: 11:00 PM
-                    last run: 12:00 AM
-                    next run: NOW + 23 hours
-                    next run +1: 10:00 PM + 23 hours... etc...
-
-                Current Time: 9:00 PM
-                    last run: 10:00 PM
-                    next run: NOW <-- run is 9:00 PM + 23 hours
-                    next run: +1: 9:00 PM + 24 hours
-                    next run: +2: 9:00 PM + 24 hours
-
-            Time Since: 0 hours (less than 30 minutes)
-                Current Time: 4:00 PM
-                    last run: 4:00 PM
-                    next run: 3:00 PM + 23 hours
-
-                Current Time: 11:00 PM
-                    last run: 11:00 PM
-                    next run: 10:00 PM + 23 hours
-
-                Current Time: 9:00 PM
-                    last run: 9:00 PM
-                    next run: 9:00 PM + 24 hours
-
-    equal to or greater than 24:
-        Run now
-
-
-'''

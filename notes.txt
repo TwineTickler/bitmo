@@ -184,4 +184,71 @@ How to make this work:
             - If it has been LONGER than 25 hours, run immediately.
             - If less: run in 23 hours SINCE last run.
 
+from Timer (initial logic):
+
+'''
+When to run an API call?
+
+based off 3 things:
+    Target Time - currently 9:00 PM
+    Current Time
+    Time Since Last Call
+
+If hour is:
+
+    less than 24:
+        If current hour is 9:00 PM -> then at 9:00 PM
+        If current hour is NOT 9:00 PM -> then at hour 23
+
+        Ex:
+            Time Since: 6 hours (rounded)
+                Current Time: 4:00 PM
+                    Last run: 10:00 AM
+                    Next run: + 23 hours since last run = 9:00 AM
+                    Next +1 run: + 23 hours since last run = 8:00 AM ... etc...
+
+                Current Time: 11:00 PM
+                    Last run: 5:00 PM
+                    Next run: 4:00 PM + 23 hours
+                    Next +1 run: 3:00 PM + 23 hours... etc...
+
+                Current Time: 9:00 PM
+                    Last run: 3:00 PM
+                    Next run: 2:00 PM + 23 hours... etc...
+
+            Time Since: 23 hours
+                Current Time: 4:00 PM
+                    last run: 5:00 PM
+                    next run: NOW + 23 hours
+                    next run +1: 3:00 PM + 23 hours... etc...
+
+                Current Time: 11:00 PM
+                    last run: 12:00 AM
+                    next run: NOW + 23 hours
+                    next run +1: 10:00 PM + 23 hours... etc...
+
+                Current Time: 9:00 PM
+                    last run: 10:00 PM
+                    next run: NOW <-- run is 9:00 PM + 23 hours
+                    next run: +1: 9:00 PM + 24 hours
+                    next run: +2: 9:00 PM + 24 hours
+
+            Time Since: 0 hours (less than 30 minutes)
+                Current Time: 4:00 PM
+                    last run: 4:00 PM
+                    next run: 3:00 PM + 23 hours
+
+                Current Time: 11:00 PM
+                    last run: 11:00 PM
+                    next run: 10:00 PM + 23 hours
+
+                Current Time: 9:00 PM
+                    last run: 9:00 PM
+                    next run: 9:00 PM + 24 hours
+
+    equal to or greater than 24:
+        Run now
+'''
+
+
 15. once the downloads are done. create functions to begin looking at trends.
