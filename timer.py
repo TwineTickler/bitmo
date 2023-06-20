@@ -227,21 +227,35 @@ continue_loop = True
 
 while continue_loop:
     
-    #TODO
-    # add 15 minute check intervals.
-    # print . every 3 min
+    minute_sleep = 0
+    second_sleep = 0
 
-    # get timer on track for every 3 minutes
-    # if minute % 3 != 0:
-        # get minute on track
-    # if second != 0:
-        # get second on track
+    if ((datetime.now().minute % 3) != 0):
 
-    # print('sleeping for 5 minutes...')
+        # sleep not setup to intervals of 3 minutes
+        minute_sleep = 3 - (datetime.now().minute % 3)
+
+    if (datetime.now().second != 0):
+
+        # sleep second not set to 0
+        second_sleep = 60 - (datetime.now().second)
+
+    if ((minute_sleep + second_sleep) != 0):
+
+        # adjust the sleep schedule to line up with 3 minute intervals
+        sleep_seconds = (minute_sleep * 60) + second_sleep
+        log.log(l + 'sleeper adjusted by: {} seconds'.format(sleep_seconds))
+
+    else:
+        sleep_seconds = (3 * 60)
+
+    # TODO add differences in output based off if the internal is at 15 minutes or 3 minutes
+
+    # print('sleeping for 3 minutes...')
     s = 'time is: {} - Next API call is at: {} - T minus {}'.format(datetime.now().strftime('%H:%M:%S'), next_API_runtime.strftime('%H:%M:%S'), (next_API_runtime - datetime.now()))
     log.log(l + s)
     print(s)
-    time.sleep(60)
+    time.sleep(sleep_seconds)
 
     # check if now is the correct hour to run the program.
     if (next_API_runtime.hour == datetime.now().hour):

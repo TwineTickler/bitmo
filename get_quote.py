@@ -38,25 +38,33 @@ def get_quote(start):
     session = Session()
     session.headers.update(headers)
 
-    # Connect to the Coin Market Cap API
-    log.log('connecting to Coin Market Cap using the ' + config.cmc_environment['environment'] + ' environment')
+    # if offline then simulate the data response from the API
+    if (config.environment == 'offline'):
 
-    try:
-        response = session.get(url, params=parameters)
-        log.log('Successful connection to CMC API')
-        data = json.loads(response.text)
-        log.log(str(data['status']))
+        log.log('in OFFLINE mode. WIll not attempt to connect to the API')
+        data = config.offline_data
 
-    except (ConnectionError, Timeout, TooManyRedirects) as e:
-        log.log(str(e))
-        print(e)
-        s = 'ERROR: Error connecting to CMC API. Aborting program.'
-        log.log(s)
-        print(s)
-        exit() # end the program here.
+    else:
+
+        # Connect to the Coin Market Cap API
+        log.log('connecting to Coin Market Cap using the ' + config.cmc_environment['environment'] + ' environment')
+
+        try:
+            response = session.get(url, params=parameters)
+            log.log('Successful connection to CMC API')
+            data = json.loads(response.text)
+            log.log(str(data['status']))
+
+        except (ConnectionError, Timeout, TooManyRedirects) as e:
+            log.log(str(e))
+            print(e)
+            s = 'ERROR: Error connecting to CMC API. Aborting program.'
+            log.log(s)
+            print(s)
+            exit() # end the program here.
 
     # if sandbox, then we need to simulate a missing header key
-    if (config.environment == 'sandbox'):
+    if (config.environment == 'sandbox' or config.environment == 'offline'):
         data['status']['total_count'] = 0
 
     # save data to the database
