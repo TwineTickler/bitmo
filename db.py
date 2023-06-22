@@ -343,7 +343,7 @@ def save_quote(conn, d):
         single_quote_error = False # for tracking only one quote at a time.
 
         # add 3 missing dictionary key value pairs if in Sandbox environment:
-        if (config.cmc_environment['environment'] == 'sandbox'):
+        if (config.cmc_environment['environment'] == 'sandbox' or config.cmc_environment['environment'] == 'offline'):
             d['quote'][c]['percent_change_30d'] = 4.839483
             d['quote'][c]['percent_change_60d'] = -8.22839
             d['quote'][c]['percent_change_90d'] = 0.384733

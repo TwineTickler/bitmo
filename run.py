@@ -42,7 +42,7 @@ while not stop_loop:
     # in sandbox: credit_count IS ALWAYS 1, so we'll have to simulate it changing to 0.
     # ALSO, I just learned that there is an undocumented key called 'total_count' we could use. #FacePalm
 
-    if (loop_iteration == 5 and config.environment == 'sandbox'):  # using for sandbox, to stop the loop
+    if (loop_iteration == 3 and (config.environment == 'sandbox' or config.environment == 'offline')):  # using for sandbox, to stop the loop
         s = 'manually setting credit_count to 0 for sandbox environment to stop the loop'
         log.log(s)
         credit_count = 0
@@ -58,7 +58,7 @@ while not stop_loop:
     # set the start parameter for next loop iteration.
     parameters['start'] = str(int(parameters['limit']) + int(parameters['start']))
 
-    if (loop_iteration == 100): # using this as a fail safe to stop an infinite loop
+    if (loop_iteration == 50): # using this as a fail safe to stop an infinite loop
         s = 'ERROR: Infinite Loop fail safe triggered. Investigate to find the cause.'
         log.log(s)
         print(s)

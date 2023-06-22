@@ -17,7 +17,8 @@ db_prefix = 'bitmo-01'
 API_key_file_name = '/' + 'CMCApiKey.txt'
 
 # Coin Market Cap API Environment (comment out the one you do not want and the rest of the script will set the correct values)
-environment = 'sandbox'
+environment = 'offline'
+#environment = 'sandbox'
 #environment = 'production'
 
 # make only 1 call to the API to get 1 set of data or loop through all the records to get EACH currency
@@ -31,7 +32,7 @@ parameters = {
   'convert':'USD' # comma separated list of what currency bases you'd like these returned in. ('USD,CAD,JPY,')
 }
 
-if (environment == 'sandbox'):
+if (environment == 'sandbox' or environment == 'offline'):
     db_name = db_prefix + '-sandbox.db'
     cmc_environment = {
         'environment': environment,
