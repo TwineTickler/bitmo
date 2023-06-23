@@ -232,33 +232,50 @@ while continue_loop:
 
     if ((datetime.now().minute % 3) != 0):
 
+        log.log(l + 'minute is not an interval of 3, making a minute adjustment to timer...')
         # sleep not setup to intervals of 3 minutes
         minute_sleep = 3 - (datetime.now().minute % 3)
+        log.log(l + 'minute_sleep set to: {}'.format(minute_sleep))
 
     if (datetime.now().second != 0):
 
+        log.log(l + 'second is not zero, making a second adjustment to timer...')
         # sleep second not set to 0
-        second_sleep = 60 - (datetime.now().second)
+        # if time is: 1:45 then needs to be 3:00
+        # minute is 2
+        # second needs to be: -45 = 1:15
+        if (minute_sleep > 0):
+            second_sleep = datetime.now().second * (-1)
+        else:
+            second_sleep = 60 - datetime.now().second
+
+        log.log(l + 'second_sleep set to: {} this should be negative if minute is greater than zero'.format(second_sleep))
 
     if ((minute_sleep + second_sleep) != 0):
 
         # adjust the sleep schedule to line up with 3 minute intervals
         sleep_seconds = (minute_sleep * 60) + second_sleep
-        log.log(l + 'sleeper adjusted by: {} seconds'.format(sleep_seconds))
+        s = 'sleeper adjusted by: {} seconds'.format(sleep_seconds)
+        log.log(l + s)
+        print(s)
 
     else:
         sleep_seconds = (3 * 60)
 
     # TODO add differences in output based off if the internal is at 15 minutes or 3 minutes
 
-    # print('sleeping for 3 minutes...')
     s = 'time is: {} - Next API call is at: {} - T minus {}'.format(datetime.now().strftime('%H:%M:%S'), next_API_runtime.strftime('%H:%M:%S'), (next_API_runtime - datetime.now()))
-    log.log(l + s)
-    print(s)
+
+    if ((datetime.now().minute % 15) != 0):
+        log.log('.')
+        print('.')
+    else:
+        log.log(l + s)
+        print(s)
     time.sleep(sleep_seconds)
 
     # check if now is the correct hour to run the program.
-    if (next_API_runtime.hour == datetime.now().hour):
+    if (next_API_runtime.hour == datetime.now().hour and next_API_runtime.date() == datetime.now().date()):
         
         # now is the target runtime. Run the program
         s = 'target runtime is NOW. Running API call...'
