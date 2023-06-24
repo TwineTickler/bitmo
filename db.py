@@ -3,16 +3,22 @@
 import config
 import log
 import sqlite3
+import os
 from datetime import datetime
 
-database_path = config.absolute_path + config.db_path + config.db_name # build the path based off the config file
-
+database_folder_path = config.absolute_path + config.db_path
+database_path = database_folder_path + config.db_name # build the path based off the config file
 
 
 def open_db_connection(caller_is_run=True):
     l = '' # request is coming from run.py (change nothing in the log output)
     if (not caller_is_run):
         l = 'TIMER: '
+
+    # if path does not exist, create it
+    if (not os.path.exists(database_folder_path)):
+        log.log(l + 'database folder path does not exist. Creating it now...')
+        os.mkdir(database_folder_path)
 
     # Connect to the database
     log.log(l + 'database is: ' + database_path)
