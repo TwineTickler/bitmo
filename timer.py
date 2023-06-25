@@ -199,9 +199,6 @@ if (time_since_last_run_hours >= 24):
     latest_insert_date = run_API_program()
     time_since_last_run, time_since_last_run_hours = get_time_since_last_run(latest_insert_date)
 
-#else:
-
-
 runnow, next_API_runtime = get_datetime_of_next_API_call()
 #print('runnow: ' + str(runnow))
 #print('next API runtime: ' + str(next_API_runtime))
@@ -215,8 +212,6 @@ if (runnow):
     latest_insert_date = run_API_program()
     time_since_last_run, time_since_last_run_hours = get_time_since_last_run(latest_insert_date)
 
-#else:
-
 # target runtime established...
 # loop the timer, until it's time to run...
 s = 'next API runtime established: {}'.format(next_API_runtime)
@@ -226,53 +221,6 @@ print(s)
 continue_loop = True
 
 while continue_loop:
-    
-    minute_sleep = 0
-    second_sleep = 0
-
-    if ((datetime.now().minute % 3) != 0):
-
-        log.log(l + 'minute is not an interval of 3, making a minute adjustment to timer...')
-        # sleep not setup to intervals of 3 minutes
-        minute_sleep = 3 - (datetime.now().minute % 3)
-        log.log(l + 'minute_sleep set to: {}'.format(minute_sleep))
-
-    if (datetime.now().second != 0):
-
-        log.log(l + 'second is not zero, making a second adjustment to timer...')
-        # sleep second not set to 0
-        # if time is: 1:45 then needs to be 3:00
-        # minute is 2
-        # second needs to be: -45 = 1:15
-        if (minute_sleep > 0):
-            second_sleep = datetime.now().second * (-1)
-        else:
-            second_sleep = 60 - datetime.now().second
-
-        log.log(l + 'second_sleep set to: {} this should be negative if minute is greater than zero'.format(second_sleep))
-
-    if ((minute_sleep + second_sleep) != 0):
-
-        # adjust the sleep schedule to line up with 3 minute intervals
-        sleep_seconds = (minute_sleep * 60) + second_sleep
-        s = 'sleeper adjusted by: {} seconds'.format(sleep_seconds)
-        log.log(l + s)
-        print(s)
-
-    else:
-        sleep_seconds = (3 * 60)
-
-    # TODO add differences in output based off if the internal is at 15 minutes or 3 minutes
-
-    s = 'time is: {} - Next API call is at: {} - T minus {}'.format(datetime.now().strftime('%H:%M:%S'), next_API_runtime.strftime('%H:%M:%S'), (next_API_runtime - datetime.now()))
-
-    if ((datetime.now().minute % 15) != 0):
-        log.log('.')
-        print('.')
-    else:
-        log.log(l + s)
-        print(s)
-    time.sleep(sleep_seconds)
 
     # check if now is the correct hour to run the program.
     if (next_API_runtime.hour == datetime.now().hour and next_API_runtime.date() == datetime.now().date()):
@@ -290,3 +238,69 @@ while continue_loop:
         print(s)
         runnow, next_API_runtime = get_datetime_of_next_API_call()
 
+    s = 'time is: {} - Next API call is at: {} - T minus {}'.format(datetime.now().strftime('%H:%M:%S'), next_API_runtime.strftime('%H:%M:%S'), (next_API_runtime - datetime.now()))
+
+    if ((datetime.now().minute % 15) != 0):
+        log.log(l + '.')
+        print('.')
+    else:
+        log.log(l + s)
+        print(s)
+
+    minute = 0
+    second = 0
+    sleep_seconds = (60 * 3)
+    this_time = datetime.now()
+
+    if ((this_time.minute % 3) != 0) or (this_time.second != 0):
+
+        # sleeper is off, make an adjustment
+        log.log(l + 'sleeper is off, adjusting...')
+        log.log(l + 'this_time = {}'.format(this_time))
+
+        # 0:15 -> minute is correct, Second is off. Minute = 2, second = 60 - s
+        # 1:00 -> minute is off, second is correct. Because second is correct, minute = 2
+        # 1:45 -> minute and second are off. Because second is off, minute = 1. Second  = 60 - s
+        # 2:00 -> minute is off, second is correct. Because second is correct, minute = 1
+        # 2:15 -> minute and second are off. Because second is off, minute = 0. Second = 60 - s 
+
+        if ((this_time.minute % 3) == 0):
+            
+            # minute is correct (so second must be off)
+            minute = 2
+            second = 60 - this_time.second
+
+        else:
+
+            # minute MUST be incorrect
+            # first check second before determining how to set minute
+            if (this_time.second == 0):
+
+                # second is correct, so only adjust minute
+                minute = 3 - (this_time.minute % 3)
+            
+            else:
+
+                # second and minute must both be incorrect, adjust both
+                second = 60 - this_time.second
+                minute = 2 - (this_time.minute % 3)   # 2 instead of 3
+
+        log.log(l + 'minute set to: {}'.format(minute))
+        log.log(l + 'second set to: {}'.format(second))
+        
+        sleep_seconds = (minute * 60) + second
+
+        if (sleep_seconds == 179):
+
+            # make sentence singular
+            s = 'sleeper adjusted by {} second'.format(180 - sleep_seconds)
+
+        else:
+
+            # plural
+            s = 'sleeper adjusted by {} seconds'.format(180 - sleep_seconds)
+
+        log.log(l + s)
+        print(s)
+
+    time.sleep(sleep_seconds)
