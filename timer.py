@@ -233,10 +233,10 @@ while continue_loop:
         time_since_last_run, time_since_last_run_hours = get_time_since_last_run(latest_insert_date)
 
         # get the runtime of next API call
+        runnow, next_API_runtime = get_datetime_of_next_API_call()
         s = 'next API runtime set: {}'.format(next_API_runtime)
         log.log(l + s)
         print(s)
-        runnow, next_API_runtime = get_datetime_of_next_API_call()
 
     s = 'time is: {} - Next API call is at: {} - T minus {}'.format(datetime.now().strftime('%H:%M:%S'), next_API_runtime.strftime('%H:%M:%S'), (next_API_runtime - datetime.now()))
 
