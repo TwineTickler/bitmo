@@ -17,6 +17,9 @@ db_prefix = 'bitmo-01'
 API_key_file_name = '/' + 'CMCApiKey.txt'
 
 # Coin Market Cap API Environment (comment out the one you do not want and the rest of the script will set the correct values)
+
+# TODO, add a choice as user input, when first starting the program as to the environment type.
+
 #environment = 'offline'
 environment = 'sandbox'
 #environment = 'production'

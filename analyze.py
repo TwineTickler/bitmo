@@ -101,6 +101,7 @@ def query_db(conn, sql):
 
 analyze_environment = 0
 
+# determine which database to analyze
 while not (analyze_environment == 1 or analyze_environment == 2):
 
     print('value of input is: {}'.format(analyze_environment))
@@ -126,7 +127,6 @@ else:
     exit()
 
 
-
 sql = '''
     SELECT * FROM response_status
 	    WHERE credit_count != 0
@@ -137,4 +137,5 @@ conn = open_db_connection()
 result = query_db(conn, sql) # both opens and closes the connection within this call
 
 for r in result:
+    print(type(r))
     print(r)

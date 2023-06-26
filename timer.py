@@ -102,6 +102,7 @@ def get_datetime_of_next_API_call():
 
         # if current hour is 1 hour before the desired target time.
         # now_hr + 1_hr = target_hour then run at target time.
+        # otherwise it would back-cycle through every hour until the target hour - I think...
         now_plus_1hour = (datetime.now() + timedelta(hours=1))
 
         if (now_plus_1hour.hour == target_run_time):
@@ -123,16 +124,61 @@ def get_datetime_of_next_API_call():
 
         # set API call time based off 23 hours from last run.
         # create a datetime that is based off the rounded hours, and then add 23 hours to it.
-        
+
         time_of_last_run_rounded = pd.Timestamp(latest_insert_date).round(freq='H')
         log.log(l + 'time of last run rounded: ' + str(time_of_last_run_rounded))
         
-        target_datetime = time_of_last_run_rounded + pd.Timedelta(hours=23)
-        log.log(l + 'time of last run, +23 hours (new target): {}'.format(target_datetime))
+        if (time_of_last_run_rounded.hour == target_run_time):
+
+            # set it to 24 hours, not 23
+            # last run WAS at the target_run_time, no need to adjust by 23 hours any more.
+            target_datetime = time_of_last_run_rounded + pd.Timedelta(hours=24)
+            log.log(l + 'time of last run, +24 hours (new target): {}'.format(target_datetime))
+        
+        else:
+
+            target_datetime = time_of_last_run_rounded + pd.Timedelta(hours=23)
+            log.log(l + 'time of last run, +23 hours (new target): {}'.format(target_datetime))
 
         return_datetime = target_datetime.to_pydatetime()
 
     return run_now, return_datetime
+
+    # TODO <---------- Actually, I don't think we need this. I think I fixed the bug. If not, then will come back to this.
+    # write out scenarios and test logic:
+    #
+    # Time now:     Last API Run:     Time Since Last Run Hours:     Hours Until Next API Call:
+    #
+    # 8:45 PM       9:00 PM
+    #               8:45 PM
+    #               8:15 PM
+    #               9:45 PM
+    #               10:10 PM
+    # 8:15 PM       9:00 PM
+    #               8:45 PM
+    #               8:15 PM
+    #               9:45 PM
+    #               10:10 PM
+    # 7:45 PM       9:00 PM
+    #               8:45 PM
+    #               8:15 PM
+    #               9:45 PM
+    #               10:10 PM
+    # 9:02 PM       9:00 PM
+    #               8:45 PM
+    #               8:15 PM
+    #               9:45 PM
+    #               10:10 PM
+    # 9:45 PM       9:00 PM
+    #               8:45 PM
+    #               8:15 PM
+    #               9:45 PM
+    #               10:10 PM
+    # 10:05 PM      9:00 PM
+    #               8:45 PM
+    #               8:15 PM
+    #               9:45 PM
+    #               10:10 PM
 
 
 ############################################## Begin runtime logic #############################################
