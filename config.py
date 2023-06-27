@@ -24,6 +24,31 @@ API_key_file_name = '/' + 'CMCApiKey.txt'
 environment = 'sandbox'
 #environment = 'production'
 
+environment_choice = 0
+
+while not ((environment_choice == 1) or (environment_choice == 2) or (environment_choice == 3) or (environment_choice == 4)):
+
+    print('Select your environment: ' + '\n' + 
+          '1: Production' + '\n' +
+          '2: Sandbox' + '\n' +
+          '3: Offline' + '\n' + 
+          '4: use config.py setting')
+
+    environment_choice = input()
+
+    try:
+        environment_choice = int(environment_choice)
+
+    except:
+        print
+
+if (environment_choice == 1):
+    environment = 'production'
+elif (environment_choice == 2):
+    environment = 'sandbox'
+elif (environment_choice == 3):
+    environment = 'offline'
+
 # make only 1 call to the API to get 1 set of data or loop through all the records to get EACH currency
 # 0 = just once (some)
 # 1 = ALL
