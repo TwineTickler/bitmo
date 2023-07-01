@@ -33,7 +33,7 @@ def get_quote(start):
     'X-CMC_PRO_API_KEY': APIkey,
     }
 
-    parameters['start'] = start # override start parameter with what is sent via the loop.
+    parameters['start'] = start # override start API parameter with what is sent via the loop.
 
     session = Session()
     session.headers.update(headers)

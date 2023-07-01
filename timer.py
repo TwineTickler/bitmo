@@ -10,6 +10,8 @@ from datetime import timedelta
 
 target_run_time = 21 # should be an integer from 0 - 23 representing the hour at which you'd like to run the API call.
 
+# TODO, why did it not try to re-run, after being rejected with the start of 20001 ?
+
 log.check_log_path(False) # If log path doesn't exist, then create it.
 l = 'TIMER: ' # setting log prefix for this file (timer.py)
 log.log(l + '--- STARTING NEW TIMER SESSION ---')
@@ -187,7 +189,7 @@ def get_datetime_of_next_API_call():
 now = datetime.now()
 s = 'start time is: {}'.format(now)
 log.log(l + s)
-print(s)
+# print(s)
 
 # get time of last database update
 # Verify Database is connected and setup:

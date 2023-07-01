@@ -24,6 +24,9 @@ log.check_log_path() # If log path doesn't exist, then create it.
 parameters = config.parameters
 loop_iteration = 1 # tracks the number of times through the loop
 stop_loop = False
+# going to essentially SAVE the start parameter, so that once we complete the loop, we can reset it back to what it was befor we ran through the loop. (since it gets updated each time)
+# because when running timer.py, it was remembering the last value that it had. (15001)
+initial_start_parameter = parameters['start']
 
 log.log('beginning loop')
 while not stop_loop:
@@ -58,7 +61,7 @@ while not stop_loop:
     # set the start parameter for next loop iteration.
     parameters['start'] = str(int(parameters['limit']) + int(parameters['start']))
 
-    if (loop_iteration == 50): # using this as a fail safe to stop an infinite loop
+    if (loop_iteration == 10): # using this as a fail safe to stop an infinite loop
         s = 'ERROR: Infinite Loop fail safe triggered. Investigate to find the cause.'
         log.log(s)
         print(s)
@@ -72,6 +75,13 @@ while not stop_loop:
         stop_loop = True
 
     loop_iteration += 1
+
+# reset the parameter start back to initial value (if using timer.py)
+ending_start_parameter = parameters['start']
+parameters['start'] = initial_start_parameter
+s = 'parameter[start] reinitialized from: {} --> to: {}'.format(ending_start_parameter, parameters['start'])
+log.log(s)
+print(s)
 
 # End program
 s = 'Program Complete'
