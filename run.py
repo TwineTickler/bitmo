@@ -15,6 +15,8 @@ import get_quote
 
 log.check_log_path() # If log path doesn't exist, then create it.
 
+print(target_run_time)
+
 # create a loop that cycles through the start parameters until we don't find any more results (use any credits)
 # first loop should retrieve 5,000 results
 # next should retrieve the 5,001 - 10,000

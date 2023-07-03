@@ -33,7 +33,7 @@ def run_API_program():
     with open('run.py') as f:
         exec(f.read())
 
-    return datetime.now()
+    return datetime.now() # TODO this is potentially an issue because the result of run.py could get an error or not work properly, and timer would still think it was successful, because it's returning a good datetime.
 
 
 def format_timedelta(delta) -> str:
