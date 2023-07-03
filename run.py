@@ -15,7 +15,7 @@ import get_quote
 
 log.check_log_path() # If log path doesn't exist, then create it.
 
-print(target_run_time)
+# print(target_run_time) # can python access a variable from within the script that is calling another file?
 
 # create a loop that cycles through the start parameters until we don't find any more results (use any credits)
 # first loop should retrieve 5,000 results

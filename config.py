@@ -60,6 +60,32 @@ parameters = {
   'convert':'USD' # comma separated list of what currency bases you'd like these returned in. ('USD,CAD,JPY,')
 }
 
+# TODO move if logic to functions so that it is not determined within the config.py file
+
+def set_environment_sandbox():
+    db_name = db_prefix + '-sandbox.db'
+    cmc_environment = {
+        'environment': environment,
+        'url': 'https://sandbox-api.coinmarketcap.com/v1/cryptocurrency/listings/latest',
+        'APIkey': 'b54bcf4d-1bca-4e8e-9a24-22ff2c3d462c'
+    }
+
+def set_environment_production():
+    db_name = db_prefix + '-prod.db'
+    # get the API key from the file
+    key_location = absolute_path + API_key_file_name
+    try:
+        with open(key_location) as f:
+            production_API_key = f.read()
+    except:
+        print('ERROR: Error reading CMC Api Key from file. Does the API Key file exist and is in the correct place?')
+        exit() # exit the program if we cannot read the API key.
+    cmc_environment = {
+        'environment': environment,
+        'url': 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest',
+        'APIkey': production_API_key
+    }
+
 if (environment == 'sandbox' or environment == 'offline'):
     db_name = db_prefix + '-sandbox.db'
     cmc_environment = {
