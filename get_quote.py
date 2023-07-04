@@ -106,7 +106,7 @@ def get_quote(start):
 
         # by now we should have a currency added for each quote. Store the quote info.
         # TODO: fix this little bug later on next line
-        s = 'saving {} quotes'.format(currency_count) # this is actually incorrect if using more than one quote per currency call. EX: convert: USD, CAD
+        s = 'saving {} quotes'.format(currency_count) # TODO this is actually incorrect if using more than one quote per currency call. EX: convert: USD, CAD
         log.log(s)
         print(s)
         error_occurred = False

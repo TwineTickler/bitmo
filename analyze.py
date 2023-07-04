@@ -213,7 +213,7 @@ for row in result:
             print('previous group is DONE, adding it to the dictionary...')
             # avgTime = datetime.strftime(datetime.fromtimestamp(sum(map(datetime.timestamp,current_group_insert_dates))/len(current_group_insert_dates)),"%H:%M:%S") # I just grabbed this from a post online. Seems to work.
             avgTime = datetime.fromtimestamp(sum(map(datetime.timestamp,current_group_insert_dates))/len(current_group_insert_dates))  # I just grabbed this from a post online. Seems to work.
-            response_status_groups[current_group_id] = [avgTime,current_group_insert_dates] # TODO need to add the average to this.
+            response_status_groups[current_group_id] = [avgTime,current_group_insert_dates]
 
             # reset to build the next group ID
             print('resettings variables and preparing for the next group ID...')
@@ -223,7 +223,13 @@ for row in result:
     current_group_insert_dates.append(current_row_insert_date)
     previous_row_insert_date = current_row_insert_date
 
-print('Dictionary complete\n')
+# add the last item to the dictionary that would have been left out in the loop:
+
+print('last group to be added: {}'.format(current_group_insert_dates))
+avgTime = datetime.fromtimestamp(sum(map(datetime.timestamp,current_group_insert_dates))/len(current_group_insert_dates))
+response_status_groups[current_group_id] = [avgTime,current_group_insert_dates]
+
+print('Dictionary complete:\n')
 
 for key, value in response_status_groups.items():
     print('key is: {}'.format(key))
@@ -287,7 +293,84 @@ for groupID, values in response_status_groups.items():
                 # one of the days failed, do not add the tuple to the list. End the while loop early.
                 counter = consecutiveDays
 
-print('Consecutive Groups Compiled\n\n')
+print('\nConsecutive Groups Compiled:\n')
 for row in consecutiveGroups:
     print(row)
-        
+
+# TODO add a WARNING or some kind of handling if a GroupID is found to be TOO CLOSE to another one (ie, less than 16 hours)
+
+
+# Next we need to get a distinct list of all numbers found in the consecutiveGroups so that we can get ALL quotes from those time frames that have positive percent_change_24h's
+# I think we should use a set because it doesn't need to be ordered, and it should not have duplicates.
+# Once we get the set and then get the data from the database, we will put the quotes into a dictionary.
+
+distinct_groupIDs = set() # initialize the set
+
+for row in consecutiveGroups:
+
+    for item in row:
+
+        distinct_groupIDs.add(item) # thankfully .add does not throw an error if the item already exists in the set.
+
+print('\ndistinct_group ID\'s gathered:\n')
+print(distinct_groupIDs)
+
+
+# now get ALL of the quotes for these group ID's and put their ID's into a dictionary.
+# should look something like this:
+#
+# { 1: [1, 2, 4, 106, 727, etc...],
+#   2: [6, 17, 105, ...          ],
+#   3: [...                      ],
+#   ...                            }
+
+qualifyingCurrencyIDs = {}
+
+for groupID in distinct_groupIDs:
+
+    print(groupID)
+
+    qualifyingCurrencyIDs[groupID] = [] # setup the key for the list of currency IDs
+
+    print(response_status_groups[groupID][0])
+
+    # get the datetime's to use for this group. +10 min and -10 min
+    AverageDatetimeHigh = response_status_groups[groupID][0] + timedelta(minutes=10)
+    AverageDatetimeLow = response_status_groups[groupID][0] - timedelta(minutes=10)
+
+    print('Datetime High: {}'.format(AverageDatetimeHigh))
+    print('Datetime Low: {}'.format(AverageDatetimeLow))
+
+    sql = '''
+        SELECT q.id
+            FROM quote q
+                JOIN currency c ON c.id = q.id 
+                    WHERE 
+                        q.insert_date BETWEEN '{}' AND '{}' AND 
+                        q.percent_change_24h > 0
+                            ORDER BY c.cmc_rank 
+    '''.format(AverageDatetimeLow, AverageDatetimeHigh)
+
+    conn = open_db_connection()
+    result = query_db(conn, sql) # both opens and closes the connection within this call
+
+    # print('SQL return is: {}'.format(result))
+
+    for item in result:
+
+        # print('SQL item: {}'.format(item[0]))
+
+        qualifyingCurrencyIDs[groupID].append(item[0])
+
+print('\nQualifying Currency IDs established: \n')
+
+# print(qualifyingCurrencyIDs)
+
+# for k, v in qualifyingCurrencyIDs.items():
+
+    # print('\n{}: value: {}\n'.format(k, v))
+
+
+
+# now that we have all the qualifying currency ID's, we need to see if there are any that in each of the groupID's for each consecutive group.
+
