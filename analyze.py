@@ -57,16 +57,16 @@ db_prefix = 'bitmo-01'
 db = config.absolute_path + config.db_path + db_prefix
 response_status_grouping_threshold = (60 * 10) # 10 minutes --> in seconds (typically only around 17 - 35 seconds or so apart, depending on which computer is processing them)
 consecutiveDayThreshold = (24 + 8) # in hours --> should be 1 day roughly, but giving 8 hours of buffer.
-consecutiveDays = 5 # how many days would we like to report on?
+consecutiveDays = None # how many days would we like to report on? --> edit, ask user for input
 
 def open_db_connection():
 
     # Connect to the database
-    print('database is: {}'.format(db))
+    # print('database is: {}'.format(db))
 
     try:
         conn = sqlite3.connect(db)
-        print('connected')
+        # print('connected')
 
     except:
         print('Fatal ERROR: Error connecting to database')
@@ -79,7 +79,7 @@ def close_db_connection(conn):
     # close the connection to the database
     try:
         conn.close()
-        print('closed connection to database')
+        # print('closed connection to database')
 
     except:
         print('ERROR: Error closing connection to database')
@@ -140,6 +140,12 @@ while not (analyze_environment == 1 or analyze_environment == 2):
     except:
         pass
 
+while not (consecutiveDays):
+
+    print('How many days would you like to report on?')
+
+    consecutiveDays = int(input())
+
 # finish created db path
 if analyze_environment == 1:
     db = db + '-prod.db'
@@ -181,7 +187,7 @@ current_group_id = 1
 current_group_insert_dates = []
 
 for row in result:
-    print(row)
+    # print(row)
     # print(row[7])
     # print(type(row[7]))
 
@@ -191,7 +197,8 @@ for row in result:
     if previous_row_insert_date == 0:
 
         # this is the first entry of the list
-        print('first row in the list')
+        # print('first row in the list')
+        pass
 
     else:
         
@@ -199,7 +206,8 @@ for row in result:
         if (previous_row_insert_date + timedelta(seconds=response_status_grouping_threshold)) >= current_row_insert_date:
 
             # this insert date is within the response_status_grouping_threshold (10 mintutes) of the last insert date (because this loop will be executed in ascending order by insert_date)
-            print('this is in the same group as the previous row')
+            # print('this is in the same group as the previous row')
+            pass
 
         else:
 
@@ -210,13 +218,13 @@ for row in result:
             # the first two if statements, essentially do nothing, it's just the else's we are using.
 
             # add the previous group to the dictionary:
-            print('previous group is DONE, adding it to the dictionary...')
+            # print('previous group is DONE, adding it to the dictionary...')
             # avgTime = datetime.strftime(datetime.fromtimestamp(sum(map(datetime.timestamp,current_group_insert_dates))/len(current_group_insert_dates)),"%H:%M:%S") # I just grabbed this from a post online. Seems to work.
             avgTime = datetime.fromtimestamp(sum(map(datetime.timestamp,current_group_insert_dates))/len(current_group_insert_dates))  # I just grabbed this from a post online. Seems to work.
             response_status_groups[current_group_id] = [avgTime,current_group_insert_dates]
 
             # reset to build the next group ID
-            print('resettings variables and preparing for the next group ID...')
+            # print('resettings variables and preparing for the next group ID...')
             current_group_id = current_group_id + 1
             current_group_insert_dates = []
             
@@ -225,16 +233,16 @@ for row in result:
 
 # add the last item to the dictionary that would have been left out in the loop:
 
-print('last group to be added: {}'.format(current_group_insert_dates))
+# print('last group to be added: {}'.format(current_group_insert_dates))
 avgTime = datetime.fromtimestamp(sum(map(datetime.timestamp,current_group_insert_dates))/len(current_group_insert_dates))
 response_status_groups[current_group_id] = [avgTime,current_group_insert_dates]
 
-print('Dictionary complete:\n')
+print('Dictionary complete:')
 
 for key, value in response_status_groups.items():
-    print('key is: {}'.format(key))
-    print('value is: {}'.format(value))
-
+    # print('key is: {}'.format(key))
+    # print('value is: {}'.format(value))
+    pass
 
 
 # Next build the Response Status Group Relationships
@@ -248,11 +256,12 @@ for key, value in response_status_groups.items():
 # This will show us a groups of Group ID's that fall within the criteria of consecutive days
 #     currently going to define a consecutive day of within the range of 1 day + 8 hours.
 
-consecutiveGroups = []
+consecutiveGroups = {}
+consecutiveGroupKey = 1
 
 for groupID, values in response_status_groups.items():
 
-    print(groupID)
+    # print(groupID)
     currentGroupInsertDate = values[0]
     currentGroupID = groupID
     currentGroupIDs = [groupID]
@@ -280,7 +289,9 @@ for groupID, values in response_status_groups.items():
                 if counter == consecutiveDays:
                     
                     # all days passed, add the tuple to the list
-                    consecutiveGroups.append(currentGroupIDs)
+                    # consecutiveGroups.append(currentGroupIDs)
+                    consecutiveGroups[consecutiveGroupKey] = currentGroupIDs
+                    consecutiveGroupKey = consecutiveGroupKey + 1
 
                 else:
                     
@@ -306,49 +317,50 @@ for row in consecutiveGroups:
 
 distinct_groupIDs = set() # initialize the set
 
-for row in consecutiveGroups:
+for v in consecutiveGroups.values():
 
-    for item in row:
+    for item in v:
 
         distinct_groupIDs.add(item) # thankfully .add does not throw an error if the item already exists in the set.
 
 print('\ndistinct_group ID\'s gathered:\n')
 print(distinct_groupIDs)
 
-
+print('\nGetting currencies from database and processing... Standby...')
 # now get ALL of the quotes for these group ID's and put their ID's into a dictionary.
 # should look something like this:
 #
-# { 1: [1, 2, 4, 106, 727, etc...],
-#   2: [6, 17, 105, ...          ],
-#   3: [...                      ],
+# { 1: {1, 2, 4, 106, 727, etc...},
+#   2: {6, 17, 105, ...          },
+#   3: {...                      },
 #   ...                            }
+#
+# using a set for the currency ID values since order doesn't matter and there should not be duplicates
 
 qualifyingCurrencyIDs = {}
 
 for groupID in distinct_groupIDs:
 
-    print(groupID)
+    # print(groupID)
 
-    qualifyingCurrencyIDs[groupID] = [] # setup the key for the list of currency IDs
+    qualifyingCurrencyIDs[groupID] = set() # setup the key for the set of currency IDs
 
-    print(response_status_groups[groupID][0])
+    # print(response_status_groups[groupID][0])
 
     # get the datetime's to use for this group. +10 min and -10 min
     AverageDatetimeHigh = response_status_groups[groupID][0] + timedelta(minutes=10)
     AverageDatetimeLow = response_status_groups[groupID][0] - timedelta(minutes=10)
 
-    print('Datetime High: {}'.format(AverageDatetimeHigh))
-    print('Datetime Low: {}'.format(AverageDatetimeLow))
+    # print('Datetime High: {}'.format(AverageDatetimeHigh))
+    # print('Datetime Low: {}'.format(AverageDatetimeLow))
 
     sql = '''
         SELECT q.id
             FROM quote q
                 JOIN currency c ON c.id = q.id 
                     WHERE 
-                        q.insert_date BETWEEN '{}' AND '{}' AND 
-                        q.percent_change_24h > 0
-                            ORDER BY c.cmc_rank 
+                        q.insert_date BETWEEN '{}' AND '{}'
+                        AND q.percent_change_24h > 0
     '''.format(AverageDatetimeLow, AverageDatetimeHigh)
 
     conn = open_db_connection()
@@ -360,7 +372,7 @@ for groupID in distinct_groupIDs:
 
         # print('SQL item: {}'.format(item[0]))
 
-        qualifyingCurrencyIDs[groupID].append(item[0])
+        qualifyingCurrencyIDs[groupID].add(item[0])
 
 print('\nQualifying Currency IDs established: \n')
 
@@ -374,3 +386,49 @@ print('\nQualifying Currency IDs established: \n')
 
 # now that we have all the qualifying currency ID's, we need to see if there are any that in each of the groupID's for each consecutive group.
 
+consecutiveGroupDetails = {}
+
+for key, group in consecutiveGroups.items():
+
+    intersectionCurrencies = set()
+    counter = 0
+
+    # print(group[0])
+    # print(group[1])
+
+    # print(qualifyingCurrencyIDs[group[0]])
+    # print(qualifyingCurrencyIDs[group[1]])
+
+    # print(qualifyingCurrencyIDs[group[0]].intersection(qualifyingCurrencyIDs[group[1]]))
+
+    # print(len(group))
+
+    while counter < len(group):
+
+        if counter == 0:
+
+            # first time through the loop
+            intersectionCurrencies = qualifyingCurrencyIDs[group[counter]]
+
+        else:
+
+            # 2nd - 5th (or last) time through the loop
+            intersectionCurrencies = intersectionCurrencies.intersection(qualifyingCurrencyIDs[group[counter]])
+
+        counter = counter + 1
+
+    consecutiveGroupDetails[key] = {'Group': group, 
+                                    'Currencies': intersectionCurrencies,
+                                    'Count': len(intersectionCurrencies)}
+
+# print('\nKey: {} Group: {} Currencies: {}\n'.format(key, group, intersectionCurrencies))
+
+for k, entry in consecutiveGroupDetails.items():
+
+    print('{}: {}\n'.format(k, entry))
+
+    # if (entry['Group'][0] == 12):
+
+        # print('{}: {}\n'.format(k, entry))
+
+    print('Start day: {} Count: {}\n'.format(entry['Group'][0], entry['Count']))
