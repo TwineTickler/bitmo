@@ -58,6 +58,8 @@ db = config.absolute_path + config.db_path + db_prefix
 response_status_grouping_threshold = (60 * 10) # 10 minutes --> in seconds (typically only around 17 - 35 seconds or so apart, depending on which computer is processing them)
 consecutiveDayThreshold = (24 + 8) # in hours --> should be 1 day roughly, but giving 8 hours of buffer.
 consecutiveDays = None # how many days would we like to report on? --> edit, ask user for input
+coin_blacklist = {18513} # a set of coins I am never interesting in trading.
+
 
 def open_db_connection():
 
@@ -339,6 +341,16 @@ print('\nGetting currencies from database and processing... Standby...')
 
 qualifyingCurrencyIDs = {}
 
+coin_blacklist_string = ''
+
+for id in coin_blacklist:
+
+    if coin_blacklist_string == '': # if first time through the loop don't add a comma between the numbers
+        coin_blacklist_string = str(id)
+
+    else: # add a comma between numbers
+        coin_blacklist_string = coin_blacklist_string + ',' + str(id)
+
 for groupID in distinct_groupIDs:
 
     # print(groupID)
@@ -360,8 +372,9 @@ for groupID in distinct_groupIDs:
                 JOIN currency c ON c.id = q.id 
                     WHERE 
                         q.insert_date BETWEEN '{}' AND '{}'
-                        AND q.percent_change_24h > 0
-    '''.format(AverageDatetimeLow, AverageDatetimeHigh)
+                        AND q.percent_change_24h > 0.49
+                        AND q.id NOT IN ({})
+    '''.format(AverageDatetimeLow, AverageDatetimeHigh, coin_blacklist_string)
 
     conn = open_db_connection()
     result = query_db(conn, sql) # both opens and closes the connection within this call
@@ -431,4 +444,6 @@ for k, entry in consecutiveGroupDetails.items():
 
         # print('{}: {}\n'.format(k, entry))
 
-    print('Start day: {} Count: {}\n'.format(entry['Group'][0], entry['Count']))
+for k, entry in consecutiveGroupDetails.items():
+
+    print('Start day: {} - End Day: {} - Count: {}\n'.format(entry['Group'][0], response_status_groups[entry['Group'][consecutiveDays-1]][0], entry['Count']))
