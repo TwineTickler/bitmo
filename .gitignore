@@ -4,6 +4,7 @@ CMCApiKey.txt
 # ignore log and db folders
 /logs
 /db
+/v2/logs
 
 # unknown files (git required I believe)
 .DS_Store
