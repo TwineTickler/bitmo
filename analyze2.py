@@ -5,7 +5,7 @@
 #       1. a number of consecutive days.
 #           a. I'd like to leave this up to the program.
 #           b. so if we have x amount of days in a row, it will analyze each case.
-#           c. for example: consecutive days are: day 1, 2, 3, 4, 5, - 7, 8, 9, - 12, 13, 14, 15, 16, 17, 18
+#           c. for example: consecutive days are: day 1, 2, 3, 4, 5 - 7, 8, 9 - 12, 13, 14, 15, 16, 17, 18
 #           d. then I'd like it to look at everything that is consecutive and fits into our criteria such as:
 #           e. say we set the positive day threshold to 70% - this would mean that within a given set of consecutive days
 #               the currency would have to have a positive change for 70% of the days.
