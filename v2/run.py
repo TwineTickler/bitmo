@@ -37,6 +37,7 @@
 
 import log
 import config
+import db
 
 def fatalError(message):
     # log the error message
@@ -55,6 +56,8 @@ if (not log.checkLogPath(config.logPath)):
     m = 'Error setting up log path. Please investigate. Exiting the program...'
     print(m)
     exit()
+
+# Verify database is setup:
 
 
 
