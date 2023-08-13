@@ -4,11 +4,21 @@ from seleniumwire import webdriver as wiredriver
 from seleniumwire.utils import decode
 import time
 import json
+import whatsapptest
 from datetime import datetime
 
 print('all imported successfully')
 
+#### useful links:
+# https://stackoverflow.com/questions/67306915/selenium-wire-response-object-way-to-get-response-body-as-string-rather-than-b
+# https://www.selenium.dev/selenium/docs/api/javascript/module/selenium-webdriver/lib/http_exports_Response.html
+# https://stackoverflow.com/questions/17082425/running-selenium-webdriver-with-a-proxy-in-python
+# https://www.browserstack.com/guide/set-proxy-in-selenium
+# https://nanonets.com/blog/web-scraping-with-selenium/
+# https://www.geeksforgeeks.org/scraping-data-in-network-traffic-using-python/
+
 loan_request_tx_hashes = set()
+loan_alerts_tx_hashes = set() # used to track which loans have already triggered an alert
 
 currency_reference_table = {
     '': 'ADA',
@@ -83,95 +93,129 @@ if (prod_test == 'prod'):
 
         # print('most recent datetime: {}'.format(sorted(response_datetimes, reverse=True)[0]))
 
-        for request in driver.requests:
+        try:
 
-            # this should only find the 1 response we are looking for (the latest one)
-            if (request.url == 'https://app.aada.finance/api/lending_and_borrowing/get_loan_requests') and (request.response.date == sorted(response_datetimes, reverse=True)[0]):
+            for request in driver.requests:
 
-                try:
+                # was getting an error that sometimes the response was of type None
+                if not (type(request.response) == type(None)):
 
-                    body = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity'))
+                    # this should only find the 1 response we are looking for (the latest one)
+                    if (request.url == 'https://app.aada.finance/api/lending_and_borrowing/get_loan_requests') and (request.response.date == sorted(response_datetimes, reverse=True)[0]):
 
-                    # response.body.decode('utf-8')
-                    body = json.loads(body)
-                    # print('{}'.format(body))
-                    # print('request dir: \n{}\n\nrequest.response dir: \n{}\n'.format(dir(request), dir(request.response)))
+                        body = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity'))
 
-                    print('counter: {}'.format(counter))
-                    # print(len(body))
-                    # print('request date: {} date type: {}'.format(request.date, type(request.date)))
-                    # print('response date: {} date type: {}'.format(request.response.date, type(request.response.date)))
-                    print('current loans being tracked: {}'.format(len(loan_request_tx_hashes)))
+                        # response.body.decode('utf-8')
+                        body = json.loads(body)
+                        # print('{}'.format(body))
+                        # print('request dir: \n{}\n\nrequest.response dir: \n{}\n'.format(dir(request), dir(request.response)))
 
-                    # create a set of Loan ID's that we will check against the master list to see if any have been removed.
-                    loan_request_tx_hashes_temp = set()
+                        print('counter: {}'.format(counter))
+                        # print(len(body))
+                        # print('request date: {} date type: {}'.format(request.date, type(request.date)))
+                        # print('response date: {} date type: {}'.format(request.response.date, type(request.response.date)))
+                        print('current loans being tracked: {}'.format(len(loan_request_tx_hashes)))
 
-                    # out of the 100+ ish loans - look for the ones that are requested by the borrower and have Cardano as the Loan token
-                    for i in body:
+                        # create a set of Loan ID's that we will check against the master list to see if any have been removed.
+                        loan_request_tx_hashes_temp = set()
 
-                        if (i['is_borrower_request'] == True) and (i['loan_token_id'] == ''):
-                            
-                            # print('{}\n'.format(i))
+                        # out of the 100+ ish loans - look for the ones that are requested by the borrower and have Cardano as the Loan token
+                        for i in body:
 
-                            # print('loan_request_tx_hash: {}'.format(i['loan_request_tx_hash']))
-                            loan_request_tx_hashes_temp.add(i['loan_request_tx_hash'])
-
-                            # add the unique ID's to a set if they are not already in there to identify if a new one has arrived.
-                            
-
-                            if not (i['loan_request_tx_hash'] in loan_request_tx_hashes):
-
-                                # ID is not in the set yet. NEW ID
+                            if (i['is_borrower_request'] == True) and (i['loan_token_id'] == ''):
                                 
-                                loan_request_tx_hashes.add(i['loan_request_tx_hash'])
+                                # print('{}\n'.format(i))
 
-                                if not (counter == 0):
+                                # print('loan_request_tx_hash: {}'.format(i['loan_request_tx_hash']))
+                                loan_request_tx_hashes_temp.add(i['loan_request_tx_hash'])
+
+                                # add the unique ID's to a set if they are not already in there to identify if a new one has arrived.
+                                
+
+                                if not (i['loan_request_tx_hash'] in loan_request_tx_hashes):
+
+                                    # ID is not in the set yet. NEW ID
                                     
-                                    # NOT just starting the program, so this is truely a new Loan that has arrived.
+                                    loan_request_tx_hashes.add(i['loan_request_tx_hash'])
 
-                                    # check to see if it's one we'd would be interested in
+                                    if not (counter == 0):
+                                        
+                                        # NOT just starting the program, so this is truely a new Loan that has arrived.
 
-                                    print('new Loan found!')
+                                        # check to see if it's one we'd would be interested in
 
-
-
-                                print('\nNew Loan Details:')
-                                term_days = (int(i['loan_period'])/1000/60/60/24)
-                                interest_percent = (i['interest_value'][''])/(i['loan_value'][''])*100
-                                apy = (365 * interest_percent) / term_days
-                                print('loan value: {} ADA'.format(i['loan_value']['']/1000000))
-                                print('interest value: {} ADA'.format(i['interest_value']['']/1000000))
-                                print('collateral value: {}'.format(i['collateral_value']))
-                                print('loan period: {} days'.format(term_days))
-                                print('actual interest: {}'.format(i['actual_interest']))
-                                print('time period: {}'.format(i['time_period']))
-                                print('interest value calculated: {}'.format(i['interest_value_calculated']))
-                                print('health factor: {}'.format(i['health_factor']))
-                                print('health factor 2: {}'.format(i['health_factor_2']))
-                                print('Interest %: {}'.format(interest_percent))
-                                print('APY: {}'.format(apy))   
-
-                                s = 'Datetime: {}\nNew Loan\nLoan Value: {} ADA\nInterest Value: {} ADA\nTerm: {} days\nHealth: {}\nInterest %: {}\nAPY: {}\n\n'.format(datetime.now(),i['loan_value']['']/1000000,i['interest_value']['']/1000000,term_days,i['health_factor'],interest_percent,apy)
-
-                                with open('results.txt', 'a') as f:
-                                    f.write(s)
+                                        print('new Loan found!')
 
 
-                    # see if any loans have been removed:
-                    for l in loan_request_tx_hashes:
 
-                        if not (l in loan_request_tx_hashes_temp):
+                                    print('\nNew Loan Details:')
 
-                            # this ID is no longer in the temp list (current list), remove it from the master list
-                            loan_request_tx_hashes.remove(l)
+                                    interest_value = float(i['interest_value']['']/1000000)
+                                    loan_value = int(i['loan_value']['']/1000000)
+                                    term_days = (int(i['loan_period'])/1000/60/60/24)
+                                    interest_percent = (interest_value/(loan_value)*100)
+                                    apy = (365 * interest_percent) / term_days
+                                    
+                                    print('loan value: {} ADA'.format(i['loan_value']['']/1000000))
+                                    print('interest value: {} ADA'.format(interest_value))
+                                    print('collateral value: {}'.format(i['collateral_value']))
+                                    print('loan period: {} days'.format(term_days))
+                                    print('actual interest: {}'.format(i['actual_interest']))
+                                    print('time period: {}'.format(i['time_period']))
+                                    print('interest value calculated: {}'.format(i['interest_value_calculated']))
+                                    print('health factor: {}'.format(i['health_factor']))
+                                    print('health factor 2: {}'.format(i['health_factor_2']))
+                                    print('Interest %: {}'.format(interest_percent))
+                                    print('APY: {}'.format(apy))   
 
-                            print('loan ID has been removed.')
+                                    s = 'Datetime: {}\nNew Loan\nLoan Value: {} ADA\nInterest Value: {} ADA\nTerm: {} days\nHealth: {}\nInterest %: {}\nAPY: {}\n\n'.format(datetime.now(),i['loan_value']['']/1000000,i['interest_value']['']/1000000,term_days,i['health_factor'],interest_percent,apy)
 
-                            print('new number of Loan IDs: {}'.format(len(loan_request_tx_hashes)))
+                                    with open('results.txt', 'a') as f:
+                                        f.write(s)
 
-                except Exception as e:
+                                    # if loan is desirable, send a message:
+                                    if (apy >= 25) and (interest_value >= 30) and (loan_value < 30000) and (not (i['loan_request_tx_hash'] in loan_alerts_tx_hashes)):
 
-                    print(e)
+                                        s = 'Loan Alert!\n'
+                                        s = s + 'APY: {}\n'.format(apy)
+                                        s = s + 'Interest: {} ADA\n'.format(interest_value)
+                                        s = s + 'Loan: {} ADA'.format(loan_value)
+                                        
+                                        # log
+                                        with open('results.txt', 'a') as f:
+                                            f.write(s)
+
+                                        # add this item to alert list so we only send it once.
+                                        loan_alerts_tx_hashes.add(i['loan_request_tx_hash'])
+
+                                        # try to send alert
+                                        try:
+                                            whatsapptest.send_whatsapp_message(msg=s)
+
+                                        except Exception as e:
+                                            
+                                            s = 'couldnt send message because: {}'.format(e)
+                                            print(s)
+                                            with open('log.txt', 'a') as f:
+                                                f.write(s)
+                                
+
+
+                        # see if any loans have been removed:
+                        for l in loan_request_tx_hashes:
+
+                            if not (l in loan_request_tx_hashes_temp):
+
+                                # this ID is no longer in the temp list (current list), remove it from the master list
+                                loan_request_tx_hashes.remove(l)
+
+                                print('loan ID has been removed.')
+
+                                print('new number of Loan IDs: {}'.format(len(loan_request_tx_hashes)))
+
+        except Exception as e:
+
+            print(e)
 
         counter = counter + 1
 
