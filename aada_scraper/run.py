@@ -4,7 +4,7 @@ from seleniumwire import webdriver as wiredriver
 from seleniumwire.utils import decode
 import time
 import json
-import whatsapptest
+import pywhatkit
 from datetime import datetime
 
 print('all imported successfully')
@@ -19,6 +19,8 @@ print('all imported successfully')
 
 loan_request_tx_hashes = set()
 loan_alerts_tx_hashes = set() # used to track which loans have already triggered an alert
+program_begin_time = datetime.now()
+max_alert_loan_value_threshold = 1100
 
 currency_reference_table = {
     '': 'ADA',
@@ -55,7 +57,8 @@ if (prod_test == 'prod'):
 
     counter = 0
 
-    while counter < 10000:
+    # while counter < 100000:
+    while True:
 
         response_datetimes = set() # setup the blank datetime set that we will use to sort and find the latest response.
 
@@ -168,18 +171,22 @@ if (prod_test == 'prod'):
                                     print('Interest %: {}'.format(interest_percent))
                                     print('APY: {}'.format(apy))   
 
-                                    s = 'Datetime: {}\nNew Loan\nLoan Value: {} ADA\nInterest Value: {} ADA\nTerm: {} days\nHealth: {}\nInterest %: {}\nAPY: {}\n\n'.format(datetime.now(),i['loan_value']['']/1000000,i['interest_value']['']/1000000,term_days,i['health_factor'],interest_percent,apy)
+                                    s = '\nDatetime: {}\nNew Loan\nLoan Value: {} ADA\nInterest Value: {} ADA\nTerm: {} days\nHealth: {}\nInterest %: {}\nAPY: {}\n\n'.format(datetime.now(),i['loan_value']['']/1000000,i['interest_value']['']/1000000,term_days,i['health_factor'],interest_percent,apy)
 
                                     with open('results.txt', 'a') as f:
                                         f.write(s)
 
                                     # if loan is desirable, send a message:
-                                    if (apy >= 25) and (interest_value >= 30) and (loan_value < 30000) and (not (i['loan_request_tx_hash'] in loan_alerts_tx_hashes)):
+                                    # don't send if this is first time program is ran (loans already there that qualify)
+                                    if (apy >= 18) and (interest_value >= 20) and (loan_value < max_alert_loan_value_threshold) and (not (i['loan_request_tx_hash'] in loan_alerts_tx_hashes)) and ((datetime.now() - program_begin_time).seconds > 30):
+                                    # if (not (i['loan_request_tx_hash'] in loan_alerts_tx_hashes)) and ((datetime.now() - program_begin_time).seconds > 30):
 
                                         s = 'Loan Alert!\n'
-                                        s = s + 'APY: {}\n'.format(apy)
+                                        s = s + 'APY: {}\n'.format(round(apy, 2))
+                                        s = s + 'Length: {} days\n'.format(term_days)
+                                        s = s + 'Loan: {} ADA\n'.format(loan_value)
                                         s = s + 'Interest: {} ADA\n'.format(interest_value)
-                                        s = s + 'Loan: {} ADA'.format(loan_value)
+                                        
                                         
                                         # log
                                         with open('results.txt', 'a') as f:
@@ -188,9 +195,21 @@ if (prod_test == 'prod'):
                                         # add this item to alert list so we only send it once.
                                         loan_alerts_tx_hashes.add(i['loan_request_tx_hash'])
 
+                                        
+
                                         # try to send alert
                                         try:
-                                            whatsapptest.send_whatsapp_message(msg=s)
+                                            # whatsapptest.send_whatsapp_message(msg=s)
+                                            # need to debug and create more stable alerting
+                                            # print('alerts currently disabled.')
+
+                                            pywhatkit.sendwhatmsg_instantly(
+                                                "+15125607878", # phone_no 
+                                                s, # message
+                                                5, # wait time
+                                                True, # tab close
+                                                5 # close time
+                                            ) # sendwhatmsg_instantly(phone_no: str, message: str, wait_time: int = 15, tab_close: bool = False, close_time: int = 3) -> None
 
                                         except Exception as e:
                                             
@@ -219,9 +238,11 @@ if (prod_test == 'prod'):
 
         counter = counter + 1
 
-        print('time since last update: {} seconds\n'.format((datetime.now() - sorted(response_datetimes, reverse=True)[0]).seconds)) # print seconds since latest API response
+        if response_datetimes: # adding this in, to make sure it's not null
+            print('time since last update: {} seconds'.format((datetime.now() - sorted(response_datetimes, reverse=True)[0]).seconds)) # print seconds since latest API response
+        print('now: {}\n'.format(datetime.now()))
 
-        time.sleep(20)
+        time.sleep(8)
 
     print("Quitting Selenium WebDriver")
     driver.quit()
