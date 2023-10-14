@@ -4,7 +4,9 @@ from seleniumwire import webdriver as wiredriver
 from seleniumwire.utils import decode
 import time
 import json
-import pywhatkit
+import credentials
+import requests
+# import pywhatkit
 from datetime import datetime
 
 print('all imported successfully')
@@ -21,6 +23,8 @@ loan_request_tx_hashes = set()
 loan_alerts_tx_hashes = set() # used to track which loans have already triggered an alert
 program_begin_time = datetime.now()
 max_alert_loan_value_threshold = 1100
+TELEGRAM_TOKEN = credentials.TOKEN
+TELEGRAM_CHAT_ID = credentials.CHAT_ID
 
 currency_reference_table = {
     '': 'ADA',
@@ -187,7 +191,6 @@ if (prod_test == 'prod'):
                                         s = s + 'Loan: {} ADA\n'.format(loan_value)
                                         s = s + 'Interest: {} ADA\n'.format(interest_value)
                                         
-                                        
                                         # log
                                         with open('results.txt', 'a') as f:
                                             f.write(s)
@@ -195,21 +198,14 @@ if (prod_test == 'prod'):
                                         # add this item to alert list so we only send it once.
                                         loan_alerts_tx_hashes.add(i['loan_request_tx_hash'])
 
-                                        
+                                        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage?chat_id={TELEGRAM_CHAT_ID}&text={s}"
 
                                         # try to send alert
                                         try:
-                                            # whatsapptest.send_whatsapp_message(msg=s)
-                                            # need to debug and create more stable alerting
-                                            # print('alerts currently disabled.')
 
-                                            pywhatkit.sendwhatmsg_instantly(
-                                                "+15125607878", # phone_no 
-                                                s, # message
-                                                5, # wait time
-                                                True, # tab close
-                                                5 # close time
-                                            ) # sendwhatmsg_instantly(phone_no: str, message: str, wait_time: int = 15, tab_close: bool = False, close_time: int = 3) -> None
+                                            requests.get(url).json()
+                                            print(s)
+                                            print('message sent successfully')
 
                                         except Exception as e:
                                             

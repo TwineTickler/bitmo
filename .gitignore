@@ -1,5 +1,6 @@
 # ignore API Key file
 CMCApiKey.txt
+aada_scraper/credentials.py
 
 # ignore log and db folders
 /logs
