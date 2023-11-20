@@ -1,0 +1,49 @@
+Basic Python Reference Notes:
+
+Dictionary {}:
+
+    Info:
+        Keys are not Ordered
+        Keys must be unique
+
+    Initialize a new empty dictionary: d = {}
+    Initialize a new dictionary with values: d = {1: 'value', 2: 'value', 3: 'value', ...}
+    Add a new record to the dictionary: d[key] = value
+    Iterate through each record in the dictionary: for key, value in d.items():
+    Iterate through each value in the dictionary: for v in d.values():
+
+List []:
+
+    Info:
+        Lists are ordered
+        Can contain duplicate members
+        Contain indexes
+        Mutable (changable)
+
+    Initialize a new empty list: l = []
+    Add a new member to the list: l.append(x)
+    Access a specific member: l[i] (i = index number)
+
+Tuple ():
+
+    Info:
+        Tuples are ordered
+        Contain indexes
+        Can contain duplicates
+        Immutable (cannot be changed)
+
+    Initialize a new empty tuple: t = ()
+    Initialize a new tuple with values: t = (5, 4, 6, ...)
+    Access a specific member: t[i] (i = index number)
+
+Set:
+
+    Info:
+        Sets Are unordered
+        Members must be unique
+        Mutable (changable)
+        No indexes
+
+    Initialize a new empty set: s = set()
+    Initialize a new set with values: s = {x, y, z, ...}
+    Add a new member to the set: s.add(x)
