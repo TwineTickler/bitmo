@@ -6,6 +6,8 @@ aada_scraper/credentials.py
 /logs
 /db
 /v2/logs
+/v2/apiResponses
+/v2/db
 
 # unknown files (git required I believe)
 .DS_Store

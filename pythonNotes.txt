@@ -47,3 +47,13 @@ Set:
     Initialize a new empty set: s = set()
     Initialize a new set with values: s = {x, y, z, ...}
     Add a new member to the set: s.add(x)
+
+Helpful functions:
+
+    dir()
+        enter a module to view all methods included
+
+datetime
+
+    datetime.now()
+        datetime.today().strftime('%Y-%m-%d %H:%M:%S')
