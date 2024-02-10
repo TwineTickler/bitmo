@@ -31,6 +31,9 @@ def getQuotes(mode, maxCmcRank):
         'convert':'USD' # comma separated list of what currency bases you'd like these returned in. ('USD,CAD,JPY,')
     }
 
+    success = False
+    data, url = '', ''
+
     # determine the environment
     if (mode == 'production'):
 
@@ -41,7 +44,7 @@ def getQuotes(mode, maxCmcRank):
                 key = f.read()
         except:
             log.log('ERROR: Error reading CMC Api Key from file. Does the API Key file exist and is in the correct place?',1)
-            exit()
+            return success, data
 
     elif (mode == 'sandbox'):
 
@@ -53,12 +56,13 @@ def getQuotes(mode, maxCmcRank):
         try:
             f = open('{}/sampleData.json'.format(config.absolutePath))
             data = json.load(f)
+            url = 'offline mode'
+            success = True
+            
         except Exception as e:
-            log.log('FATAL ERROR reading or loading json file for offline mode: {}'.format(e))
-            exit()
-
-        # TODO later on, we might want to replace dates in this data with current datetimes
-        # Also, will want to replace the contents of the sampleData.json with a real API response instead of from Sandbox
+            log.log('ERROR reading or loading json file for offline mode: {}'.format(e), 1)
+            
+            # TODO later on, we might want to replace dates in this data with current datetimes
 
     else:
 
@@ -76,13 +80,14 @@ def getQuotes(mode, maxCmcRank):
             log.log('Attempting to connect to the API...',1)
             response = session.get(url, params=parameters)
             data = json.loads(response.text)
+            data['serverResponse'] = {'statusCode' : response.status_code, 'reason' : response.reason} # also record the server response
+            success = True
 
         except Exception as e:
-            log.log('FATAL ERROR attempting to connect to the API. Check the log for a detailed error message.', 1)
+            log.log('ERROR attempting to connect to the API. Check the log for a detailed error message.', 1)
             log.log('{}'.format(e))
-            exit()
 
-    return data
+    return success, data, url
 
 
 

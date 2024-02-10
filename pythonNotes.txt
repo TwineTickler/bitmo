@@ -11,6 +11,7 @@ Dictionary {}:
     Add a new record to the dictionary: d[key] = value
     Iterate through each record in the dictionary: for key, value in d.items():
     Iterate through each value in the dictionary: for v in d.values():
+    Access a value via a key reference: d[key]
 
 List []:
 
@@ -57,3 +58,12 @@ datetime
 
     datetime.now()
         datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+
+        from datetime import datetime, timezone
+
+        datetime.now(timezone.utc)
+
+Helpful Files:
+
+    loadSampleData.py
+        used to load in a sample cmc API response easily into the python console.

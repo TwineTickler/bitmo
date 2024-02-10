@@ -5,9 +5,9 @@
 #       message:
 #           the message you'd like printed to the log file
 #
-#       prnt: bit 0 or 1
-#           If prnt is 0, then do not print to console.
-#           If prnt is 1, then print the message to console as well.
+#       prnt: bit
+#           0 - (default) do not print to console.
+#           1 - print the message to console as well.
 #
 #       t (type): 0 or 1
 #           0 - default (info)
@@ -17,12 +17,12 @@
 
 import os
 import config
-from datetime import datetime
+from datetime import datetime, timezone
 
 def log(message,prnt=0,t=0):
 
     # determine which file to use. If current log file exists then use it, if not, then create one.
-    fileName = config.logPath + str(datetime.today().strftime('%Y-%m-%d')) + '.txt'
+    fileName = config.logPath + str(datetime.now(timezone.utc).strftime('%Y-%m-%d')) + '.txt'
 
     if (t == 1):
         message = 'WARNING: {}'.format(message)
@@ -33,7 +33,7 @@ def log(message,prnt=0,t=0):
     # if we use the 'a' mode then it shouldn't matter if the file exists or not, if it does not, it will create it.
     try:
         f = open(fileName, 'a') # create or open the current file
-        f.write(str(datetime.now()) + ' --- ' + message + '\n') # write the log message + a new line
+        f.write(str(datetime.now(timezone.utc)) + ' --- ' + message + '\n') # write the log message + a new line
         f.close()
     except:
         print('ERROR: Error writing the message to log. Please Investigate. Original Message: {}'.format(message))
