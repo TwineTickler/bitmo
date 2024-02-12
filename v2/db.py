@@ -30,6 +30,55 @@
 #
 #           returns: N/A
 #
+#
+#   NOTES:
+#
+#       Sqlite automatically creates a primary key autoincrement field for each table called ROWID
+#
+#   TABLES:
+#
+#       tags - keep track of which tags are active on cmc for any given currency
+#
+#           currencyID INTEGER
+#               Foreign Key to the Currency ID column in the currency table
+#               This ID is what is used by CMC to designate a unique currency
+#
+#           insertDate NUMERIC
+#               datetime (UTC) the record was inserted
+#
+#           tag TEXT
+#               the tag name
+#
+#           active INTEGER
+#               can be either 0 (inactive) or 1 (active)
+#               used to designate if this tag is currently included on cmc or not
+#               most recent tags will be set to 1 (active)
+#               any tag this is not included in a response will be marked as inactive
+#
+#       auditLog - record all UPDATES to any records in the DB
+#
+#           insertDate NUMERIC
+#               datetime (UTC) the record was inserted
+#
+#           tableName TEXT
+#               name of the table in which the record update took place
+#
+#           recordRowID INTEGER
+#               the RowID of the record which was updated
+#
+#           column TEXT
+#               the column name which was updated
+#
+#           oldValue TEXT
+#               the value in the column before the update was made
+#
+#           newValue TEXT
+#               the value in the column after the update was made
+#
+#           changeType TEXT
+#               the type of change that was made to the record (INSERT, UPDATE, DELETE)
+#               (currently all of these values should be UPDATE, unless I add others later to the program.)
+
 
 import config
 import os
@@ -86,6 +135,8 @@ def closeDBConnection(conn):
 
 def createTables(conn):
 
+    # NOTE: Sqlite automatically creates an Auto Increment Primary Key field titled ROWID
+
     result = False
 
     try:
@@ -105,30 +156,32 @@ def createTables(conn):
                     totalCount INTEGER,
                     endpoint TEXT
                 )
-            """) # This table is good.
+            """)
         
         c.execute('''
                 CREATE TABLE IF NOT EXISTS currency (
                     insertDate NUMERIC,
-                    id INTEGER,
+                    lastModified NUMERIC,
+                    currencyID INTEGER,
                     name TEXT,
                     symbol TEXT,
                     slug TEXT,
                     numMarketPairs INTEGER,
+                    dateAdded NUMERIC,
                     maxSupply INTEGER,
-                    circulatingSupply INTEGER
+                    circulatingSupply INTEGER,
                     totalSupply INTEGER,
                     infiniteSupply NUMERIC,
                     cmcRank INTEGER,
                     tvlRatio INTEGER,
-                    lastUpdated NUMERIC,
-                    lastModified NUMERIC
+                    lastUpdated NUMERIC
                 )
-            ''') # this table looks good.
+            ''')
         
         c.execute('''
                 CREATE TABLE IF NOT EXISTS quote (
-                    id INTEGER,
+                    currencyRowID INTEGER,
+                    currencyID INTEGER,
                     symbol TEXT,
                     currencyBase TEXT,
                     insertDate NUMERIC,
@@ -147,18 +200,39 @@ def createTables(conn):
                     cmcRank INTEGER,
                     numMarketPairs INTEGER
                 )
-            ''') # checking this table...
+            ''')
+        
+        c.execute('''
+                CREATE TABLE IF NOT EXISTS tags (
+                    currencyID INTEGER,
+                    insertDate NUMERIC,
+                    tag TEXT,
+                    active INTEGER
+                )
+            ''')
+
+        c.execute('''
+                CREATE TABLE IF NOT EXISTS auditLog (
+                    insertDate NUMERIC,
+                    tableName TEXT,
+                    recordRowID INTEGER,
+                    column TEXT,
+                    oldValue TEXT,
+                    newValue TEXT,
+                    changeType TEXT
+                )
+            ''')
         
         conn.commit()
 
         result = True
 
-        log.log('Verified db tables are ready')
+        log.log('Verified DB tables are ready')
         
     except Exception as e:
 
         # log error message
-        log.log('Error running createTables in db.py: {}'.format(e),0,1)
+        log.log('Error running createTables in db.py: {}'.format(e),1,1)
 
     return result
 
@@ -192,9 +266,9 @@ def saveQuote(conn, q, url):
     #   3. serverResponse
     #       serverResponse Table
 
-    result = False
+    result = True # if any exceptions occur, set this to False
 
-    # first save to the serverResponse Table
+    # save to the serverResponse Table
     
     dataTuple = (
         str(datetime.now(timezone.utc)),    # insertDate        NUMERIC
@@ -233,18 +307,151 @@ def saveQuote(conn, q, url):
 
         c.execute(sql, dataTuple)
         conn.commit()
-        result = True
         log.log('serverResponse record successfully inserted into the database')
 
     except Exception as e:
 
         log.log('Error inserting record into serverResponse table: {}'.format(e),1,1)
+        result = False
 
-    # save to the quote and currency Tables
+    # save the currencies
+    #   for each currency in the response: 
+    #       if it doesn't already exist, then create a record for it
+    #       if it does, then update any value on the record that has changed (any updates should be logged in the auditLog)
+
+    # get a list of all currencies ID's already in the database, to compare against.
+
+    sql = 'SELECT currencyID FROM currency;'
+    c.execute(sql)
+    r = c.fetchall() # Example result: [(1830,), (8117,), (6350,), (1472,)]
+    currenciesInTheDB = []
+    for i in r: # moving this weird list of tuples into a normal list
+        currenciesInTheDB.append(i[0])
+
+    print('currencies in the DB: {}'.format(currenciesInTheDB))
+
+    # TODO: build comparison to see if an update is needed. otherwise, insert.
 
 
 
-    
+
+    for i in q['data']:
+
+        if i['id'] in currenciesInTheDB:
+            
+            # already in the DB --> UPDATE currency AND possibly tags
+            # TODO
+            pass
+
+        else: # not in the DB yet --> INSERT INTO currency AND tags
+
+            dataTuple = (
+                str(datetime.now(timezone.utc)),    # insertDate        NUMERIC
+                str(datetime.now(timezone.utc)),    # lastModified      NUMERIC
+                i['id'],                            # currencyID        INTEGER
+                i['name'],                          # name              TEXT
+                i['symbol'],                        # symbol            TEXT
+                i['slug'],                          # slug              TEXT
+                i['num_market_pairs'],              # numMarketPairs    INTEGER
+                i['date_added'],                    # dateAdded         NUMERIC
+                i['max_supply'],                    # maxSupply         INTEGER
+                i['circulating_supply'],            # circulatingSupply INTEGER
+                i['total_supply'],                  # totalSupply       INTEGER
+                i['infinite_supply'],               # infiniteSupply    NUMERIC
+                i['cmc_rank'],                      # cmcRank           INTEGER
+                i['tvl_ratio'],                     # tvlRatio          INTEGER
+                i['last_updated']                   # lastUpdated       NUMERIC
+            )
+
+            sql = '''
+                INSERT INTO currency (
+                    insertDate,
+                    lastModified,
+                    currencyID,
+                    name,
+                    symbol,
+                    slug,
+                    numMarketPairs,
+                    dateAdded,
+                    maxSupply,
+                    circulatingSupply,
+                    totalSupply,
+                    infiniteSupply,
+                    cmcRank,
+                    tvlRatio,
+                    lastUpdated
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            '''
+
+            try:
+
+                c.execute(sql, dataTuple)
+                conn.commit()
+                log.log('currency record successfully inserted into the database')
+            
+            except Exception as e:
+
+                log.log('Error inserting record into currency table: {}'.format(e),1,1)
+                result = False
+
+            # Insert the tags
+        
+            if len(i['tags']) > 0:
+
+                for tag in i['tags']:
+
+                    dataTuple = (
+                        str(datetime.now(timezone.utc)),    # insertDate    NUMERIC
+                        i['id'],                            # currencyID    INTEGER
+                        tag,                                # tag           TEXT
+                        1                                   # active        INTEGER
+                    )
+
+                    sql = '''
+                        INSERT INTO tags (
+                            insertDate,
+                            currencyID,
+                            tag,
+                            active
+                        )
+                        VALUES (?, ?, ?, ?);
+                    '''
+
+                    try:
+
+                        c.execute(sql, dataTuple)
+                        conn.commit()
+                        log.log('tag record successfully inserted into the database')
+
+                    except Exception as e:
+
+                        log.log('Error inserting record into tag table: {}'.format(e),1,1)
+                        result = False
+                    
+            else:
+
+                log.log('No tags to insert for this currency')
+
+
+
+
+
+    # TODO: save the tags (new currency tags insert done)
+
+
+
+
+
+
+
+    # TODO: save the quotes
+
+
+
+
+
+
 
     return result
 

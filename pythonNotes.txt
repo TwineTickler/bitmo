@@ -36,6 +36,7 @@ Tuple ():
     Initialize a new empty tuple: t = ()
     Initialize a new tuple with values: t = (5, 4, 6, ...)
     Access a specific member: t[i] (i = index number)
+    Convert a List to a Tuple: t = tuple(l)
 
 Set:
 

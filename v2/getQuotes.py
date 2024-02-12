@@ -81,6 +81,15 @@ def getQuotes(mode, maxCmcRank):
             response = session.get(url, params=parameters)
             data = json.loads(response.text)
             data['serverResponse'] = {'statusCode' : response.status_code, 'reason' : response.reason} # also record the server response
+
+            if mode == 'sandbox': # add properties not included by their API as to not get DB insert errors
+
+                data['status']['total_count'] = 2900
+
+                for i in data['data']:
+
+                    i['tvl_ratio'] = None
+
             success = True
 
         except Exception as e:
