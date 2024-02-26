@@ -159,13 +159,17 @@ def startProgram(
     fileName = "{}/{}.json".format(apiResponsePath,datetime.now(timezone.utc).strftime('%Y-%m-%d_%H-%M-%S'))
 
     if not mode == 'production':
+
         fileName = fileName[0:-5] + '_sandbox.json'
 
     try:
+
         with open(fileName, 'w') as fp:
             json.dump(q, fp, sort_keys=True, indent=4)
         log.log('API response dump file created: {}'.format(fileName))
+
     except Exception as e:
+
         message = 'Error creating apiResponse/ file: {}'.format(e)
         log.log(message,prnt=1)
 
@@ -176,10 +180,10 @@ def startProgram(
     elif not (q['serverResponse']['statusCode'] == 200):
         log.log('Problem with the server response. Investigate: {}'.format(q['serverResponse']), 1, 1)
 
-    else: # good server response. Insert the data.
+    else: # good server response. Save the data.
 
-        print('\nq.Status: {}'.format(q['status']))
-        print('\nq.Data: {}'.format(q['data']))
+        # print('\nq.Status: {}'.format(q['status']))
+        # print('\nq.Data: {}'.format(q['data']))
         print('\nq.serverResponse: {}\n'.format(q['serverResponse']))
 
         # TODO Only save the quote and currency data if the response status is a 200
@@ -190,13 +194,13 @@ def startProgram(
     
         dbResponse = db.createTables(conn)
 
-        if not dbResponse: # this is false, fatal error.
+        if not dbResponse: # if this is false, fatal error.
 
             fatalError('Error setting up Tables in DB. Investigate.')
 
         dbResponse = db.saveQuote(conn, q, url)
 
-        if not dbResponse: # this is false, there was an error when trying to save this data.
+        if not dbResponse: # if this is false, there was an error when trying to save this data.
 
             fatalError('Error saving the quote to the Database. Investigate.')
 
@@ -220,7 +224,7 @@ def startProgram(
     log.log('reached the end of the program\n', prnt=1)
 
 # sandbox, production, offline
-startProgram(callFrequencyMinutes=15, mode='offline', maxCmcRank=2) # THIS is calling the program
+startProgram(callFrequencyMinutes=15, mode='sandbox', maxCmcRank=2) # THIS is calling the program
 
 
 
