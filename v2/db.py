@@ -37,11 +37,21 @@
 #
 #   TABLES:
 #
+#       quote - 
+#
+#           serverResponseRowID INTEGER
+#               Foreign Key to dbo.serverResponse
+#               Used to link a quote record directly to the API call it arrived on
+#
 #       tags - keep track of which tags are active on cmc for any given currency
 #
 #           currencyID INTEGER
 #               Foreign Key to the Currency ID column in the currency table
 #               This ID is what is used by CMC to designate a unique currency
+#
+#           serverResponseRowID INTEGER
+#               Foreign Key to dbo.serverResponse
+#               Used to identify which API call it arrived in
 #
 #           insertDate NUMERIC
 #               datetime (UTC) the record was inserted
@@ -182,6 +192,7 @@ def createTables(conn):
         c.execute('''
                 CREATE TABLE IF NOT EXISTS quote (
                     currencyRowID INTEGER,
+                    serverResponseRowID INTEGER,
                     currencyID INTEGER,
                     symbol TEXT,
                     currencyBase TEXT,
@@ -206,6 +217,7 @@ def createTables(conn):
         c.execute('''
                 CREATE TABLE IF NOT EXISTS tags (
                     currencyID INTEGER,
+                    serverResponseRowID INTEGER,
                     insertDate NUMERIC,
                     tag TEXT,
                     active INTEGER
@@ -337,17 +349,16 @@ def saveQuote(conn, q, url):
 
     # print('currencies in the DB: {}\n'.format(currenciesInTheDB))
 
-    # TODO: build comparison to see if an update is needed. otherwise, insert.
 
+    # q['data'][0]['max_supply'] = random.randrange(1, 1000) # TESTING
+    # q['data'][0]['slug'] = 'text{}'.format(random.randrange(1, 9)) # TESTING
+    # q['data'][0]['numMarketPairs'] = random.randrange(1, 1000) # TESTING
+    # q['data'][1]['symbol'] = 'BTC{}'.format(random.randrange(1, 9)) # TESTING
 
-    q['data'][0]['max_supply'] = random.randrange(1, 1000) # TESTING
-    ####            TODO       Test out this UPDATE code. Getting an unknown error.
 
     for newCurrencyRecord in q['data']: # newCurrencyRecord = each currency in the CMC API Response
 
         if newCurrencyRecord['id'] in currenciesInTheDB: # currency already in the DB --> UPDATE dbo.currency AND possibly dbo.tags
-
-            # TODO check if there are any updates needed to the dbo.currency record
             
             # first grab the dbo.currency record, then compare it.
 
@@ -355,7 +366,7 @@ def saveQuote(conn, q, url):
             c.execute(sql)
             existingCurrencyRecord = c.fetchall()
 
-            print('this currency is already in the database: {}'.format(existingCurrencyRecord))
+            # print('this currency is already in the database: {}'.format(existingCurrencyRecord))
 
             sql = 'UPDATE currency SET ' # begin building the SQL for the UPDATE and for the AuditLog
             auditLogSQL = 'INSERT INTO auditLog (insertDate, tableName, recordRowID, column, oldValue, newValue, changeType) VALUES'
@@ -367,7 +378,7 @@ def saveQuote(conn, q, url):
 
             if existingCurrencyRecord[0][1] != newCurrencyRecord['name']: # name doesn't match, update this field
 
-                sql += 'name = {}'.format(newCurrencyRecord['name'])
+                sql += 'name = "{}"'.format(newCurrencyRecord['name'])
 
                 log.log('name field to be updated: {} --> {}'.format(existingCurrencyRecord[0][1], newCurrencyRecord['name']), 1, 1)
 
@@ -393,7 +404,7 @@ def saveQuote(conn, q, url):
 
                     sql += ', '
 
-                sql += 'symbol = {}'.format(newCurrencyRecord['symbol'])
+                sql += 'symbol = "{}"'.format(newCurrencyRecord['symbol'])
 
                 log.log('symbol field to be updated: {} --> {}'.format(existingCurrencyRecord[0][2], newCurrencyRecord['symbol']), 1, 1)
 
@@ -423,7 +434,7 @@ def saveQuote(conn, q, url):
 
                     sql += ', '
 
-                sql += 'slug = {}'.format(newCurrencyRecord['slug'])
+                sql += 'slug = "{}"'.format(newCurrencyRecord['slug'])
 
                 log.log('slug field to be updated: {} --> {}'.format(existingCurrencyRecord[0][3], newCurrencyRecord['slug']), 1, 1)
 
@@ -455,7 +466,7 @@ def saveQuote(conn, q, url):
 
                 sql += 'numMarketPairs = {}'.format(newCurrencyRecord['num_market_pairs'])
 
-                log.log('numMarketPairs field to be updated: {} --> {}'.format(existingCurrencyRecord[0][4], newCurrencyRecord['num_market_pairs']), 1, 1)
+                log.log('numMarketPairs field to be updated: {} --> {}'.format(existingCurrencyRecord[0][4], newCurrencyRecord['num_market_pairs']), 1, 0)
 
                 if '?' in auditLogSQL:
 
@@ -483,7 +494,7 @@ def saveQuote(conn, q, url):
 
                     sql += ', '
 
-                sql += 'dateAdded = {}'.format(newCurrencyRecord['date_added'])
+                sql += 'dateAdded = "{}"'.format(newCurrencyRecord['date_added'])
 
                 log.log('dateAdded field to be updated: {} --> {}'.format(existingCurrencyRecord[0][5], newCurrencyRecord['date_added']), 1, 1)
 
@@ -515,7 +526,7 @@ def saveQuote(conn, q, url):
 
                 sql += 'maxSupply = {}'.format(newCurrencyRecord['max_supply'])
 
-                log.log('maxSupply field to be updated: {} --> {}'.format(existingCurrencyRecord[0][6], newCurrencyRecord['max_supply']), 1, 1)
+                log.log('maxSupply field to be updated: {} --> {}'.format(existingCurrencyRecord[0][6], newCurrencyRecord['max_supply']), 1, 0)
 
                 if '?' in auditLogSQL:
 
@@ -545,7 +556,7 @@ def saveQuote(conn, q, url):
 
                 sql += 'circulatingSupply = {}'.format(newCurrencyRecord['circulating_supply'])
 
-                log.log('circulatingSupply field to be updated: {} --> {}'.format(existingCurrencyRecord[0][7], newCurrencyRecord['circulating_supply']), 1, 1)
+                log.log('circulatingSupply field to be updated: {} --> {}'.format(existingCurrencyRecord[0][7], newCurrencyRecord['circulating_supply']), 1, 0)
 
                 if '?' in auditLogSQL:
 
@@ -575,7 +586,7 @@ def saveQuote(conn, q, url):
 
                 sql += 'totalSupply = {}'.format(newCurrencyRecord['total_supply'])
 
-                log.log('totalSupply field to be updated: {} --> {}'.format(existingCurrencyRecord[0][8], newCurrencyRecord['total_supply']), 1, 1)
+                log.log('totalSupply field to be updated: {} --> {}'.format(existingCurrencyRecord[0][8], newCurrencyRecord['total_supply']), 1, 0)
 
                 if '?' in auditLogSQL:
 
@@ -605,7 +616,7 @@ def saveQuote(conn, q, url):
 
                 sql += 'infiniteSupply = {}'.format(newCurrencyRecord['infinite_supply'])
 
-                log.log('infiniteSupply field to be updated: {} --> {}'.format(existingCurrencyRecord[0][9], newCurrencyRecord['infinite_supply']), 1, 1)
+                log.log('infiniteSupply field to be updated: {} --> {}'.format(existingCurrencyRecord[0][9], newCurrencyRecord['infinite_supply']), 1, 0)
 
                 if '?' in auditLogSQL:
 
@@ -635,7 +646,7 @@ def saveQuote(conn, q, url):
 
                 sql += 'cmcRank = {}'.format(newCurrencyRecord['cmc_rank'])
 
-                log.log('cmcRank field to be updated: {} --> {}'.format(existingCurrencyRecord[0][10], newCurrencyRecord['cmc_rank']), 1, 1)
+                log.log('cmcRank field to be updated: {} --> {}'.format(existingCurrencyRecord[0][10], newCurrencyRecord['cmc_rank']), 1, 0)
 
                 if '?' in auditLogSQL:
 
@@ -665,7 +676,7 @@ def saveQuote(conn, q, url):
 
                 sql += 'tvlRatio = {}'.format(newCurrencyRecord['tvl_ratio'])
 
-                log.log('tvlRatio field to be updated: {} --> {}'.format(existingCurrencyRecord[0][11], newCurrencyRecord['tvl_ratio']), 1, 1)
+                log.log('tvlRatio field to be updated: {} --> {}'.format(existingCurrencyRecord[0][11], newCurrencyRecord['tvl_ratio']), 1, 0)
 
                 if '?' in auditLogSQL:
 
@@ -693,9 +704,9 @@ def saveQuote(conn, q, url):
 
                     sql += ', '
 
-                sql += 'lastUpdated = {}'.format(newCurrencyRecord['last_updated'])
+                sql += 'lastUpdated = "{}"'.format(newCurrencyRecord['last_updated'])
 
-                log.log('lastUpdated field to be updated: {} --> {}'.format(existingCurrencyRecord[0][12], newCurrencyRecord['last_updated']), 1, 1)
+                log.log('lastUpdated field to be updated: {} --> {}'.format(existingCurrencyRecord[0][12], newCurrencyRecord['last_updated']), 1, 0)
 
                 if '?' in auditLogSQL:
 
@@ -714,37 +725,16 @@ def saveQuote(conn, q, url):
                 )
 
 
-            '''
-
-            Fields in dbo.Currency to possibly UPDATE
-
-                insertDate NUMERIC,         # UPDATE NOT NEEDED
-                lastModified NUMERIC,       <-- ALWAYS be updated (TODO)
-                currencyID INTEGER,         # UPDATE NOT NEEDED
-                name TEXT,                  # DONE
-                symbol TEXT,                # DONE
-                slug TEXT,                  # DONE
-                numMarketPairs INTEGER,     # DONE
-                dateAdded NUMERIC,          # DONE
-                maxSupply INTEGER,          # DONE
-                circulatingSupply INTEGER,  # DONE
-                totalSupply INTEGER,        # DONE
-                infiniteSupply NUMERIC,     # DONE
-                cmcRank INTEGER,            # DONE
-                tvlRatio INTEGER,           # DONE
-                lastUpdated NUMERIC         # DONE
-
-            '''
-
-
-            sql += 'WHERE currencyID = {}'.format(newCurrencyRecord['id'])
-
-
             print('length of auditLogDataTuple: {}'.format(len(auditLogDataTuple)))
+            
 
-            if len(auditLogDataTuple) > 0:
+            if len(auditLogDataTuple) > 0: # if we have at least one field that has changed. Update the record.
 
-                # we have at least one field that has changed. Update the record.
+                sql += ', lastModified = "{}"'.format(datetime.now(timezone.utc))
+                sql += ' WHERE currencyID = {}'.format(newCurrencyRecord['id'])
+
+                print('\nUPDATE statement: {}'.format(sql))
+                print('\nAuditLogSQL: {}\n\nAuditLogData: {}\n\n'.format(auditLogSQL, auditLogDataTuple))
 
                 try:
 
@@ -752,11 +742,11 @@ def saveQuote(conn, q, url):
                     c.execute(auditLogSQL, auditLogDataTuple)
                     conn.commit()
 
-                    log.log('currency record successfully updated')
+                    log.log('dbo.currency record successfully updated')
                 
                 except Exception as e:
 
-                    log.log('Error updating record into currency table: {}'.format(e),1,1)
+                    log.log('Error updating record into dbo.currency: {}'.format(e),1,1)
                     result = False
 
 
@@ -770,7 +760,7 @@ def saveQuote(conn, q, url):
 
 
 
-        else: # not in the DB yet --> INSERT INTO currency AND tags
+        else: # not in the DB yet --> INSERT INTO dbo.currency AND dbo.tags
 
             dataTuple = (
                 str(datetime.now(timezone.utc)),            # insertDate        NUMERIC
@@ -815,11 +805,11 @@ def saveQuote(conn, q, url):
 
                 c.execute(sql, dataTuple)
                 conn.commit()
-                log.log('currency record successfully inserted')
+                log.log('dbo.currency record successfully inserted')
             
             except Exception as e:
 
-                log.log('Error inserting record into currency table: {}'.format(e),1,1)
+                log.log('Error inserting record into dbo.currency: {}'.format(e),1,1)
                 result = False
 
             # Insert the tags
@@ -835,6 +825,8 @@ def saveQuote(conn, q, url):
                         1                                   # active        INTEGER
                     )
 
+                    # TODO include the serverResponseRowID ( need to find it and then include it )
+
                     sql = '''
                         INSERT INTO tags (
                             insertDate,
@@ -849,11 +841,11 @@ def saveQuote(conn, q, url):
 
                         c.execute(sql, dataTuple)
                         conn.commit()
-                        log.log('tag record successfully inserted into the database')
+                        log.log('dbo.tag record successfully inserted')
 
                     except Exception as e:
 
-                        log.log('Error inserting record into tag table: {}'.format(e),1,1)
+                        log.log('Error inserting record into dbo.tag: {}'.format(e),1,1)
                         result = False
                     
             else:
