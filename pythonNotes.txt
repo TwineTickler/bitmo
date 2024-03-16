@@ -58,11 +58,15 @@ Helpful functions:
 datetime
 
     datetime.now()
-        datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+    datetime.today().strftime('%Y-%m-%d %H:%M:%S')
+    datetime.timedelta(days=3)
+    from datetime import datetime, timezone
 
-        from datetime import datetime, timezone
+    datetime.now(timezone.utc)
 
-        datetime.now(timezone.utc)
+    datetime.now().hour
+
+    datetime.replace(year=2022)
 
 Helpful Files:
 
