@@ -140,14 +140,37 @@ timeStart = datetime.now()
 productionDB = '{}{}{}'.format(config.absolute_path,config.db_path,config.db_name)
 validRecords = vr.findValidRecords()
 SQLResults = {}
+distinctCoinIDs = []
+dayMoves = (1, 2, 3, 5, 7, 10, 14, 30)
+movePercentLows = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)
+movePercentHighs = (2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)
+movePercentCombos = []
+movePercentCombosNeg = []
+
+for l in movePercentLows:
+
+    for h in movePercentHighs:
+
+        if l < h:
+
+            movePercentCombos.append('{}-{}%'.format(l, h))
+
+for x in movePercentCombos:
+
+    movePercentCombosNeg.append('-{}'.format(x))
+
+movePercentCombos.append('+100%')
+movePercentCombosNeg.append('-100%')
+
+movePercentCombos = tuple(movePercentCombos + movePercentCombosNeg) # move to a tuple to save memory
 
 ###########################################
 #
 #                   TESTING
 #
 #
-testing = False
-showAllObjects = False
+testing = True
+showAllObjects = True
 #
 ############################################
 
@@ -307,10 +330,14 @@ for k, v in APIGroupCounts.items():
                     
                     SQLResults[k][validRecordsKey][2][coinRecord[0]] = (coinRecord[1:])
 
+                    # collect a distinct list of all coin ID's for later TODO
+
+                    if coinRecord[0] not in distinctCoinIDs:
+
+                        distinctCoinIDs.append(coinRecord[0])
+
                 
 
-
-        
 
 
 #############################################################################
@@ -320,6 +347,125 @@ for k, v in APIGroupCounts.items():
 #
 #                                                                           #
 #############################################################################
+
+
+
+
+# SQLResults (Dict)
+#
+#   {
+#       1: {                            # API Group ID
+#           1: [                        # API Day ID (key from validRecords)
+#               '2024-01-01 21:05:00',  # Day API Time LOW
+#               '2024-01-01 21:12:00',  # Day API Time HIGH
+#               {
+#                   1: (...)            # coin ID and it's data
+#                   2: (...)
+#                   3: (...)
+#               }
+#           ]
+#           2: [                        # API Day ID
+#               '2024-01-02 21:05:00',  # Day API Time LOW
+#               '2024-01-02 21:12:00',  # Day API Time HIGH
+#               {
+#                   1: (...)            # coin ID and it's data
+#                   2: (...)
+#                   3: (...)
+#               }
+#           ]
+#       }
+#       2: {...}                        # API Group ID...
+#   }
+
+
+# Output Example:
+
+#
+#       {
+#           1: {                        # Coin ID
+#               1: {                    # Length of move (1 day)
+#                   '1-2%': {           # Distance of the move
+#                       '-0-5%': {      # Average volume change % (volume over this time period / average) TODO
+#                           3: (        # days to future result
+#                               '5%',   # result % increase
+#                               25000,  # starting price
+#                               27000,  # result price
+#                               '-24%'  # average volume change over this period (volume for this period compared with average daily vol)
+#                               '-2%',  # highest/lowest % change over this period
+#                               '24000' # high/low of price during this time period
+#                           )
+#                       }
+#                   }
+#               }
+#           }
+#       }
+
+# begin creating the Output Shell (ALL scenarios)
+    # THEN add in the results
+
+Output = {}
+
+###############################
+#   FOR EACH coinID
+###############################
+for coinID in distinctCoinIDs:
+
+    Output[coinID] = {}     # Coin ID
+
+    #########################################
+    #   FOR EACH coinID
+    #       FOR EACH dayMove (Length of move)
+    #########################################
+    for day in dayMoves:
+
+        Output[coinID][day] = {}    # Length of Move (dayMove)
+
+        #########################################
+        #   FOR EACH coinID
+        #       FOR EACH dayMove (Length of move)
+        #           FOR EACH distanceOfMove
+        #########################################
+        for distance in movePercentCombos:
+
+            Output[coinID][day][distance] = {}  # Distance of the move in Percent
+
+            #############################################
+            #   FOR EACH coinID
+            #       FOR EACH dayMove (Length of move)
+            #           FOR EACH distanceOfMove
+            #               FOR EACH Average Volume Delta
+            #############################################
+
+            #TODO
+
+
+
+                
+                
+                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -350,12 +496,29 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
     for k, v in APIGroupCounts.items():
         print('API Key Group ID: {}   Count: {}'.format(k, v))
 
-    print('SQLResults dictionary:')
-    pprint(SQLResults)
+    if testing: # only print this if in testing mode (otherwise too long)
+        print('SQLResults dictionary:')
+        pprint(SQLResults)
+        print('Output: ')
+        pprint(Output)
+
+    print('distinct Coin IDs: \n{}'.format(distinctCoinIDs))
+    print('count of distinct Coin IDs: {}'.format(len(distinctCoinIDs)))
+    print('move Percent Combos: {}'.format(movePercentCombos))
+
+    l = len(distinctCoinIDs) * len(dayMoves) * len(movePercentCombos)
+    print('Estimated length of empty Output dict shell: {}'.format(l))
 
 timeEnd = datetime.now()
 
-print('\nTotal runtime: {} Seconds\n'.format((timeEnd-timeStart).seconds))
+s = (timeEnd-timeStart).seconds
+if s < 60:
+    print('\nTotal runtime: {} Seconds\n'.format(s))
+else:
+    m = int(s/60)
+    s = s%60
+    print('\nTotal runtime: {} Minutes {} Seconds\n'.format(m,s))
+
 
 # further questions to ask ourselves after this:
 #
