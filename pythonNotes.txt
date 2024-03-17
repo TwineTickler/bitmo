@@ -72,3 +72,6 @@ Helpful Files:
 
     loadSampleData.py
         used to load in a sample cmc API response easily into the python console.
+
+from pprint import pprint
+import pause (need to install: pip install pause)
