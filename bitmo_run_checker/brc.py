@@ -17,7 +17,7 @@ TELEGRAM_CHAT_ID = credentials.CHAT_ID
 if now.hour > 20:
 
     # run tomorrow - otherwise run today
-    nextCheck = now + dt.timedelta(day=1) # add 1 day to today
+    nextCheck = now + td(days=1) # add 1 day to today
 
 nextCheck = now.replace(hour=21, minute=10, second=0) # replace hour, minute, and second
 # nextCheck = now.replace(hour=1, minute=32, second=0) # FOR TESTING
@@ -26,7 +26,7 @@ while True:
 
     print('\nNext check scheduled for: {}'.format(nextCheck))
 
-    sql = 'select COUNT(*) from response_status rs WHERE insert_date > \'{}\' AND error_code = 0 AND error_message IS NULL AND credit_count > 0'.format(nextCheck.strftime('%Y-%m-%d %H:%M:%S'))
+    sql = 'select COUNT(*) from response_status rs WHERE insert_date > \'{}\' AND error_code = 0 AND error_message IS NULL AND credit_count > 0'.format(nextCheck.replace(minute=0).strftime('%Y-%m-%d %H:%M:%S'))
     # sql = 'select COUNT(*) from response_status rs WHERE insert_date > \'2024-03-15 21:00:00\' AND error_code = 0 AND error_message IS NULL AND credit_count > 0' # FOR TESTING
     
     pause.until(nextCheck)
@@ -35,6 +35,7 @@ while True:
 
     c.execute(sql)
     r = c.fetchall()
+    # print('SQL query is: {}'.format(sql))
     print('db result is: {}'.format(r[0][0]))
 
     if r[0][0] > 1: # currently expecting 2 results, but later this might be 1, or 3 depending on the number of currencies tracked by CMC (1 result for ever 5,000 currencies)
