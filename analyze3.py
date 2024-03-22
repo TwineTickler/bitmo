@@ -146,6 +146,10 @@ movePercentLows = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)
 movePercentHighs = (2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)
 movePercentCombos = []
 movePercentCombosNeg = []
+volumeDeltaLows = (0, 5, 10, 25, 50, 75, 100, 200, 500)
+volumeDeltaHighs = (5, 10, 25, 50, 75, 100, 200, 500)
+volumeDeltaCombos = []
+volumeDeltaCombosNeg = []
 
 for l in movePercentLows:
 
@@ -159,10 +163,27 @@ for x in movePercentCombos:
 
     movePercentCombosNeg.append('-{}'.format(x))
 
-movePercentCombos.append('+100%')
-movePercentCombosNeg.append('-100%')
+movePercentCombos.append('>100%')
+movePercentCombosNeg.append('<-100%')
 
 movePercentCombos = tuple(movePercentCombos + movePercentCombosNeg) # move to a tuple to save memory
+
+for l in volumeDeltaLows:
+
+    for h in volumeDeltaHighs:
+
+        if l < h:
+
+            volumeDeltaCombos.append('{}-{}%'.format(l, h))
+
+for i in volumeDeltaCombos:
+
+    volumeDeltaCombosNeg.append('-{}'.format(i))
+
+volumeDeltaCombos.append('>500%')
+volumeDeltaCombosNeg.append('<-500%')
+
+volumeDeltaCombos = tuple(volumeDeltaCombos + volumeDeltaCombosNeg) # move to a tuple to save memory
 
 ###########################################
 #
@@ -221,7 +242,8 @@ for k, v in validRecords.items():
         APIGroupCounts[v[0]] = APIGroupCounts[v[0]] + 1
 
 if testing:
-    APIGroupCounts = {3: 17}
+    APIGroupCounts = {3: 17, 4: 62}
+    
 
 print('\nAPIGroupCounts Object:')
 
@@ -258,7 +280,10 @@ for k, v in APIGroupCounts.items():
 
                 sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\''.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                 if testing: # only 3 coins if testing
+                    # 3 coins
                     sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1, 2, 3)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                    # 1 coin
+                    # sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                 c.execute(sql)
                 r = c.fetchall()
 
@@ -385,13 +410,13 @@ for k, v in APIGroupCounts.items():
 #           1: {                        # Coin ID
 #               1: {                    # Length of move (1 day)
 #                   '1-2%': {           # Distance of the move
-#                       '-0-5%': {      # Average volume change % (volume over this time period / average) TODO
+#                       '-0-5%': {      # Average volume change % (volume over this time period / average)
 #                           3: (        # days to future result
-#                               '5%',   # result % increase
+#                               '5%',   # result % increase/decrease
 #                               25000,  # starting price
 #                               27000,  # result price
 #                               '-24%'  # average volume change over this period (volume for this period compared with average daily vol)
-#                               '-2%',  # highest/lowest % change over this period
+#                               '-2%',  # highest/lowest % change over this period (Intermediate Price Delta +/-)
 #                               '24000' # high/low of price during this time period
 #                           )
 #                       }
@@ -405,44 +430,162 @@ for k, v in APIGroupCounts.items():
 
 Output = {}
 
-###############################
-#   FOR EACH coinID
-###############################
 for coinID in distinctCoinIDs:
 
-    Output[coinID] = {}     # Coin ID
-
-    #########################################
+    ###############################
     #   FOR EACH coinID
-    #       FOR EACH dayMove (Length of move)
-    #########################################
-    for day in dayMoves:
+    ###############################
 
-        Output[coinID][day] = {}    # Length of Move (dayMove)
+    Output[coinID] = {}     # Coin ID
+    
+    for day in dayMoves:
 
         #########################################
         #   FOR EACH coinID
         #       FOR EACH dayMove (Length of move)
-        #           FOR EACH distanceOfMove
         #########################################
+
+        Output[coinID][day] = {}    # Length of Move (dayMove)
+        
         for distance in movePercentCombos:
 
-            Output[coinID][day][distance] = {}  # Distance of the move in Percent
-
-            #############################################
+            #########################################
             #   FOR EACH coinID
             #       FOR EACH dayMove (Length of move)
             #           FOR EACH distanceOfMove
-            #               FOR EACH Average Volume Delta
-            #############################################
+            #########################################
 
-            #TODO
+            Output[coinID][day][distance] = {}  # Distance of the move in Percent
+            
+            for volumeDelta in volumeDeltaCombos:
 
+                #############################################
+                #   FOR EACH coinID
+                #       FOR EACH dayMove (Length of move)
+                #           FOR EACH distanceOfMove
+                #               FOR EACH Average Volume Delta
+                #############################################
 
+                Output[coinID][day][distance][volumeDelta] = {}
+
+# create a dictionary with API Day ID, coin membership.
+
+# APIDayCoinMembership:
+#
+#   {
+#       1: {                            # API Day ID
+#           (1, 2, 3, 4, 5, etc...)     # Coin IDs
+#       }
+#   }
+
+APIDayCoinMembership = {}
+
+for APIGroupID, APIDayID in SQLResults.items():
+    
+    for APIDay, APIDayData in APIDayID.items():
+
+        APIDayCoinMembership[APIDay] = []
+
+        for coinID in APIDayData[2].keys():
+
+            APIDayCoinMembership[APIDay].append(coinID)
+
+        APIDayCoinMembership[APIDay] = tuple(APIDayCoinMembership[APIDay])
+
+# TODO, test this
 
                 
                 
-                
+
+# Output Example:
+
+#
+#       {
+#           1: {                        # Coin ID
+#               1: {                    # Length of move (1 day)
+#                   '1-2%': {           # Distance of the move
+#                       '-0-5%': {      # Average volume change % (volume over this time period / average)
+#                           3: (        # days to future result
+#                               '5%',   # result % increase/decrease
+#                               25000,  # starting price
+#                               27000,  # result price
+#                               '-24%'  # average volume change over this period (volume for this period compared with average daily vol)
+#                               '-2%',  # highest/lowest % change over this period (Intermediate Price Delta +/-)
+#                               '24000' # high/low of price during this time period
+#                           )
+#                       }
+#                   }
+#               }
+#           }
+#       }
+
+# Shell setup, 
+# begin analyzing and storing the results
+
+#   Object to consider (parameters)
+#
+#   Coin
+#
+#   Length of the initial Move
+#
+#   Distance of the initial Move
+#
+#   Volume Delta of the initial Move
+#
+#   Future result (Days)
+#   
+#   Results to track:
+#       Price % Delta
+#       Starting Price
+#       Ending Price
+#       Average Volume % Delta
+#       Intermediate Price % Delta
+#       Intermediate Price
+
+for APIGroupID, APIGroupCount in APIGroupCounts.items():
+
+    ##############################
+    #   FOR EACH - API Group
+    ##############################
+
+    print('\nAPI Key Group ID: {}   Count: {}\n'.format(APIGroupID, APIGroupCount))
+
+    # Determine the count of the coin in this group
+    # actually forget this. Just try to start and calculate based off this coin ID.
+    # if we are missing a reference, then we need to code around that and either use a None or NULL value.
+
+    # APIGroupCoinCount = 0
+
+    # for APIID in SQLResults[APIGroupID].keys():
+
+    #     # FOR EACH APIID in the SQLResults FOR THIS API GROUP, how many times does this coin appear?
+
+    #     if coinID in SQLResults[APIGroupID][APIID][2].keys():
+
+    #         print('found an API call with this coin')
+
+    for coin in distinctCoinIDs:
+
+        ###############################
+        #   FOR EACH coinID
+        ###############################
+
+        # find the first day to start on.
+
+        pass
+
+
+
+
+        for lengthOfMove in dayMoves:
+
+            ###############################
+            #   FOR EACH length of move Ex: (1, 2, 3, 5, 7, 10, 14, 30)
+            ###############################
+
+            pass
+            
+
 
 
 
@@ -497,17 +640,26 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
         print('API Key Group ID: {}   Count: {}'.format(k, v))
 
     if testing: # only print this if in testing mode (otherwise too long)
-        print('SQLResults dictionary:')
-        pprint(SQLResults)
-        print('Output: ')
-        pprint(Output)
+        # print('SQLResults dictionary:')   # OUTPUT TOO MUCH
+        # pprint(SQLResults)                # OUTPUT TOO MUCH
+
+        # print('Output: ')             # OUTPUT TOO LARGE
+        # pprint(Output)                # OUTPUT TOO LARGE
+
+        pass
 
     print('distinct Coin IDs: \n{}'.format(distinctCoinIDs))
-    print('count of distinct Coin IDs: {}'.format(len(distinctCoinIDs)))
-    print('move Percent Combos: {}'.format(movePercentCombos))
+    print('\ncount of distinct Coin IDs: {}'.format(len(distinctCoinIDs)))
+    print('\nmove Percent Combonations: {}'.format(movePercentCombos))
+    print('\nvolume Delta Combonations: {}'.format(volumeDeltaCombos))
 
-    l = len(distinctCoinIDs) * len(dayMoves) * len(movePercentCombos)
+    l = len(distinctCoinIDs) * len(dayMoves) * len(movePercentCombos) * len(volumeDeltaCombos)
     print('Estimated length of empty Output dict shell: {}'.format(l))
+
+    pprint(APIDayCoinMembership)
+
+
+
 
 timeEnd = datetime.now()
 
