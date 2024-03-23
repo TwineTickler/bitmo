@@ -62,7 +62,7 @@
 #           5 days after
 #           7 days after
 #           10 days after
-#           14 days after
+#           15 days after
 #           30 days after
 #
 #   IMPORTANT NOTES about Output:
@@ -142,6 +142,7 @@ validRecords = vr.findValidRecords()
 SQLResults = {}
 distinctCoinIDs = []
 dayMoves = (1, 2, 3, 5, 7, 10, 14, 30)
+resultDays = (1, 2, 3, 5, 7, 10, 15, 30)
 movePercentLows = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)
 movePercentHighs = (2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)
 movePercentCombos = []
@@ -211,10 +212,12 @@ showAllObjects = True
 
 if testing:
 
-    print('validRecords Object:')
+    # print('validRecords Object:')
 
-    for k, v in validRecords.items():
-        print('KEY: {}   VALUE: {}'.format(k, v))
+    # for k, v in validRecords.items():
+    #     print('KEY: {}   VALUE: {}'.format(k, v))
+
+    pass
 
 APIGroupCounts = {}
 
@@ -479,8 +482,11 @@ for coinID in distinctCoinIDs:
 #   }
 
 APIDayCoinMembership = {}
+APIGroupCoinMembership = {}
 
 for APIGroupID, APIDayID in SQLResults.items():
+
+    APIGroupCoinMembership[APIGroupID] = []
     
     for APIDay, APIDayData in APIDayID.items():
 
@@ -490,9 +496,14 @@ for APIGroupID, APIDayID in SQLResults.items():
 
             APIDayCoinMembership[APIDay].append(coinID)
 
-        APIDayCoinMembership[APIDay] = tuple(APIDayCoinMembership[APIDay])
+            if coinID not in APIGroupCoinMembership[APIGroupID]:
 
-# TODO, test this
+                APIGroupCoinMembership[APIGroupID].append(coinID)
+
+        APIDayCoinMembership[APIDay] = tuple(APIDayCoinMembership[APIDay])
+    
+    APIGroupCoinMembership[APIGroupID] = tuple(APIGroupCoinMembership[APIGroupID])
+
 
                 
                 
@@ -503,8 +514,8 @@ for APIGroupID, APIDayID in SQLResults.items():
 #       {
 #           1: {                        # Coin ID
 #               1: {                    # Length of move (1 day)
-#                   '1-2%': {           # Distance of the move
-#                       '-0-5%': {      # Average volume change % (volume over this time period / average)
+#                   '1-2%': {           # Price Delta Range (%)
+#                       '-0-5%': {      # Average volume delta range % (volume over this time period / average)
 #                           3: (        # days to future result
 #                               '5%',   # result % increase/decrease
 #                               25000,  # starting price
@@ -519,10 +530,36 @@ for APIGroupID, APIDayID in SQLResults.items():
 #           }
 #       }
 
+# SQLResults (Dict)
+#
+#   {
+#       1: {                            # API Group ID
+#           1: [                        # API Day ID (key from validRecords)
+#               '2024-01-01 21:05:00',  # Day API Time LOW
+#               '2024-01-01 21:12:00',  # Day API Time HIGH
+#               {
+#                   1: (...)            # coin ID and it's data
+#                   2: (...)
+#                   3: (...)
+#               }
+#           ]
+#           2: [                        # API Day ID
+#               '2024-01-02 21:05:00',  # Day API Time LOW
+#               '2024-01-02 21:12:00',  # Day API Time HIGH
+#               {
+#                   1: (...)            # coin ID and it's data
+#                   2: (...)
+#                   3: (...)
+#               }
+#           ]
+#       }
+#       2: {...}                        # API Group ID...
+#   }
+
 # Shell setup, 
 # begin analyzing and storing the results
 
-#   Object to consider (parameters)
+#   Objects to consider (parameters)
 #
 #   Coin
 #
@@ -542,13 +579,21 @@ for APIGroupID, APIDayID in SQLResults.items():
 #       Intermediate Price % Delta
 #       Intermediate Price
 
-for APIGroupID, APIGroupCount in APIGroupCounts.items():
+for APIGroupID, APIDayDict in SQLResults.items():
 
     ##############################
     #   FOR EACH - API Group
     ##############################
 
-    print('\nAPI Key Group ID: {}   Count: {}\n'.format(APIGroupID, APIGroupCount))
+    APIDayIDs = []
+
+    for DayID in APIDayDict.keys():
+
+        APIDayIDs.append(DayID)
+
+    pprint('Day IDs (for this API group): {}'.format(APIDayIDs))
+
+    # print('\nAPI Key Group ID: {}   Count: {}\n'.format(APIGroupID, APIGroupCount))
 
     # Determine the count of the coin in this group
     # actually forget this. Just try to start and calculate based off this coin ID.
@@ -564,26 +609,106 @@ for APIGroupID, APIGroupCount in APIGroupCounts.items():
 
     #         print('found an API call with this coin')
 
-    for coin in distinctCoinIDs:
+    for coin in APIGroupCoinMembership[APIGroupID]:
 
         ###############################
-        #   FOR EACH coinID
+        #   FOR EACH coinID (in this API Group)
         ###############################
 
-        # find the first day to start on.
-
-        pass
-
-
-
+        pprint('API Group ID: {} - Coin ID: {}'.format(APIGroupID, coin))
 
         for lengthOfMove in dayMoves:
 
             ###############################
-            #   FOR EACH length of move Ex: (1, 2, 3, 5, 7, 10, 14, 30)
+            #   FOR EACH length of move (how many days) = (1, 2, 3, 5, 7, 10, 14, 30) 
             ###############################
 
-            pass
+            # EX:
+            #
+            #   lengthOfMove = 1
+            #
+            #       StartDayID = 1
+            #       EndDayID = 2 (StartDayID + lengthOfMove)
+            #
+            #       StartDayID = 2
+            #       EndDayID = 3
+            #
+            #   lengthOfMove = 2
+            #
+            #       StartDayID
+
+            for DayID in APIDayIDs:
+
+                EndDayID = DayID + lengthOfMove
+
+                for ResultDay in resultDays:
+
+                    ResultDayID = EndDayID + ResultDay
+
+                    if ResultDayID < (APIDayIDs[0] + APIGroupCounts[APIGroupID]):
+                        
+                        # Result Day is within the API Group Window
+                        # We have a valid occurence to check
+
+                        print('API Group: {}   API Group Count: {}   Coin: {}   Length Of Move: {}   Start Day: {}   End Day: {}   Result Day: {}'.format(APIGroupID, APIGroupCounts[APIGroupID], coin, lengthOfMove, DayID, EndDayID, ResultDayID))
+
+                        # BEGIN CALCULATIONS
+
+                        # TO DO TRY, if we FAIL it's probably becaseu we are missing a coin ID in this date range
+
+                        try:
+
+                            # 1: PRICE DELTA (%) TODO
+
+                            priceFirstDay = APIDayDict[DayID][2][coin][1]
+                            priceLastDay = APIDayDict[EndDayID][2][coin][1]
+
+                            print('First Day Price: {}   Last Day Price: {}'.format(priceFirstDay, priceLastDay))
+
+
+
+
+
+
+                            # 2: AVG VOLUME DELTA (%) TODO
+
+
+
+
+
+
+
+                            # 3: Intermediate Price TODO
+
+
+
+
+
+
+                            # 4: Intermediate Price Delta (%) TODO
+
+                        except Exception as e:
+
+                            print('failed, probably missing a coin ID here. Error: {}'.format(e))
+
+
+
+
+
+                        
+
+            
+            for distance in movePercentCombos:
+
+                #################################
+                #   FOR EACH distance ('1-2%', '1-3%', ... '75-100%', '>100%', '-1-2%', '-1-3%', ... '-75-100%', '<-100%')
+                #################################
+
+                pass
+
+
+
+
             
 
 
@@ -656,6 +781,7 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
     l = len(distinctCoinIDs) * len(dayMoves) * len(movePercentCombos) * len(volumeDeltaCombos)
     print('Estimated length of empty Output dict shell: {}'.format(l))
 
+    pprint(APIGroupCoinMembership)
     pprint(APIDayCoinMembership)
 
 
