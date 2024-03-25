@@ -141,16 +141,14 @@ productionDB = '{}{}{}'.format(config.absolute_path,config.db_path,config.db_nam
 validRecords = vr.findValidRecords()
 SQLResults = {}
 distinctCoinIDs = []
-dayMoves = (1, 2, 3, 5, 7, 10, 14, 30)
+dayMoves = (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMove
 resultDays = (1, 2, 3, 5, 7, 10, 15, 30)
-movePercentLows = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)
-movePercentHighs = (2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)
+movePercentLows = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100)       # using these strictly for the loops below to build out all the combinations
+movePercentHighs = (2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 50, 75, 100, 101)    # 101 is used to represent anything above 100
 movePercentCombos = []
-movePercentCombosNeg = []
-volumeDeltaLows = (0, 5, 10, 25, 50, 75, 100, 200, 500)
-volumeDeltaHighs = (5, 10, 25, 50, 75, 100, 200, 500)
+volumeDeltaLows = (0, 5, 10, 15, 25, 50, 75, 100, 200, 500)      # using these strictly for the loops below to build out all the combinations
+volumeDeltaHighs = (5, 10, 15, 25, 50, 75, 100, 200, 500, 501)   # 501 is used to represent anything above 500
 volumeDeltaCombos = []
-volumeDeltaCombosNeg = []
 
 for l in movePercentLows:
 
@@ -158,16 +156,10 @@ for l in movePercentLows:
 
         if l < h:
 
-            movePercentCombos.append('{}-{}%'.format(l, h))
+            movePercentCombos.append((l, h))
+            movePercentCombos.append((l * (-1), h * (-1)))
 
-for x in movePercentCombos:
-
-    movePercentCombosNeg.append('-{}'.format(x))
-
-movePercentCombos.append('>100%')
-movePercentCombosNeg.append('<-100%')
-
-movePercentCombos = tuple(movePercentCombos + movePercentCombosNeg) # move to a tuple to save memory
+movePercentCombos = tuple(movePercentCombos) # move to a tuple to save memory
 
 for l in volumeDeltaLows:
 
@@ -175,16 +167,10 @@ for l in volumeDeltaLows:
 
         if l < h:
 
-            volumeDeltaCombos.append('{}-{}%'.format(l, h))
+            volumeDeltaCombos.append((l, h))
+            volumeDeltaCombos.append((l * (-1), h * (-1)))
 
-for i in volumeDeltaCombos:
-
-    volumeDeltaCombosNeg.append('-{}'.format(i))
-
-volumeDeltaCombos.append('>500%')
-volumeDeltaCombosNeg.append('<-500%')
-
-volumeDeltaCombos = tuple(volumeDeltaCombos + volumeDeltaCombosNeg) # move to a tuple to save memory
+volumeDeltaCombos = tuple(volumeDeltaCombos) # move to a tuple to save memory
 
 ###########################################
 #
@@ -364,7 +350,32 @@ for k, v in APIGroupCounts.items():
 
                         distinctCoinIDs.append(coinRecord[0])
 
-                
+# get Volume Averages for each coin for ALL days
+
+coinAverageVolumes = {}
+
+for coinID in distinctCoinIDs:
+
+    CoinCount = 0
+    CoinVolumeTotal = 0
+    AverageVolume = 0
+
+    for Group in SQLResults.values():
+
+        for Day in Group.values():
+
+            for coinID2, coinData in Day[2].items():
+
+                if coinID == coinID2:
+
+                    CoinCount = CoinCount + 1
+                    CoinVolumeTotal = CoinVolumeTotal + coinData[2] # 24hr Volume
+
+    AverageVolume = CoinVolumeTotal / CoinCount
+    coinAverageVolumes[coinID] = AverageVolume
+
+    print('Coin ID: {}   Total Volume: {}   Coin Count: {}   Average Volume: {}'.format(coinID, CoinVolumeTotal, CoinCount, AverageVolume))
+
 
 
 
@@ -405,6 +416,69 @@ for k, v in APIGroupCounts.items():
 #       2: {...}                        # API Group ID...
 #   }
 
+
+
+
+# create a dictionary with API Day ID, coin membership.
+
+# APIDayCoinMembership:
+#
+#   {
+#       1: {                            # API Day ID
+#           (1, 2, 3, 4, 5, etc...)     # Coin IDs
+#       }
+#   }
+
+APIDayCoinMembership = {}
+APIGroupCoinMembership = {}
+
+for APIGroupID, APIDayID in SQLResults.items():
+
+    APIGroupCoinMembership[APIGroupID] = []
+    
+    for APIDay, APIDayData in APIDayID.items():
+
+        APIDayCoinMembership[APIDay] = []
+
+        for coinID in APIDayData[2].keys():
+
+            APIDayCoinMembership[APIDay].append(coinID)
+
+            if coinID not in APIGroupCoinMembership[APIGroupID]:
+
+                APIGroupCoinMembership[APIGroupID].append(coinID)
+
+        APIDayCoinMembership[APIDay] = tuple(APIDayCoinMembership[APIDay])
+    
+    APIGroupCoinMembership[APIGroupID] = tuple(APIGroupCoinMembership[APIGroupID])
+
+
+                
+                
+
+# Output Example:
+
+#
+#       {
+#           1: {                        # Coin ID
+#               1: {                    # Length of move (1 day)
+#                   '1-2%': {           # Price Delta Range (%)
+#                       '-0-5%': {      # Average volume delta range % (volume over this time period / average)
+#                           3: (        # days to future result
+#                               '5%',   # result % increase/decrease
+#                               25000,  # starting price
+#                               27000,  # result price
+#                               '-24%'  # average volume change over this period (volume for this period compared with average daily vol)
+#                               '2%',   # highest % change over this result (Intermediate Price Delta)
+#                               '-2%',  # lowest % change over this result period (Intermediate Price Delta)
+#                               '24000' # high of price during this result period
+#                               '24000' # low of the price during this result period
+#                           )
+#                       }
+#                   }
+#               }
+#           }
+#       }
 
 # Output Example:
 
@@ -471,90 +545,6 @@ for coinID in distinctCoinIDs:
 
                 Output[coinID][day][distance][volumeDelta] = {}
 
-# create a dictionary with API Day ID, coin membership.
-
-# APIDayCoinMembership:
-#
-#   {
-#       1: {                            # API Day ID
-#           (1, 2, 3, 4, 5, etc...)     # Coin IDs
-#       }
-#   }
-
-APIDayCoinMembership = {}
-APIGroupCoinMembership = {}
-
-for APIGroupID, APIDayID in SQLResults.items():
-
-    APIGroupCoinMembership[APIGroupID] = []
-    
-    for APIDay, APIDayData in APIDayID.items():
-
-        APIDayCoinMembership[APIDay] = []
-
-        for coinID in APIDayData[2].keys():
-
-            APIDayCoinMembership[APIDay].append(coinID)
-
-            if coinID not in APIGroupCoinMembership[APIGroupID]:
-
-                APIGroupCoinMembership[APIGroupID].append(coinID)
-
-        APIDayCoinMembership[APIDay] = tuple(APIDayCoinMembership[APIDay])
-    
-    APIGroupCoinMembership[APIGroupID] = tuple(APIGroupCoinMembership[APIGroupID])
-
-
-                
-                
-
-# Output Example:
-
-#
-#       {
-#           1: {                        # Coin ID
-#               1: {                    # Length of move (1 day)
-#                   '1-2%': {           # Price Delta Range (%)
-#                       '-0-5%': {      # Average volume delta range % (volume over this time period / average)
-#                           3: (        # days to future result
-#                               '5%',   # result % increase/decrease
-#                               25000,  # starting price
-#                               27000,  # result price
-#                               '-24%'  # average volume change over this period (volume for this period compared with average daily vol)
-#                               '-2%',  # highest/lowest % change over this period (Intermediate Price Delta +/-)
-#                               '24000' # high/low of price during this time period
-#                           )
-#                       }
-#                   }
-#               }
-#           }
-#       }
-
-# SQLResults (Dict)
-#
-#   {
-#       1: {                            # API Group ID
-#           1: [                        # API Day ID (key from validRecords)
-#               '2024-01-01 21:05:00',  # Day API Time LOW
-#               '2024-01-01 21:12:00',  # Day API Time HIGH
-#               {
-#                   1: (...)            # coin ID and it's data
-#                   2: (...)
-#                   3: (...)
-#               }
-#           ]
-#           2: [                        # API Day ID
-#               '2024-01-02 21:05:00',  # Day API Time LOW
-#               '2024-01-02 21:12:00',  # Day API Time HIGH
-#               {
-#                   1: (...)            # coin ID and it's data
-#                   2: (...)
-#                   3: (...)
-#               }
-#           ]
-#       }
-#       2: {...}                        # API Group ID...
-#   }
 
 # Shell setup, 
 # begin analyzing and storing the results
@@ -578,6 +568,9 @@ for APIGroupID, APIDayID in SQLResults.items():
 #       Average Volume % Delta
 #       Intermediate Price % Delta
 #       Intermediate Price
+
+exceptionCount = 0
+outputCount = 0
 
 for APIGroupID, APIDayDict in SQLResults.items():
 
@@ -650,104 +643,251 @@ for APIGroupID, APIDayDict in SQLResults.items():
                         # Result Day is within the API Group Window
                         # We have a valid occurence to check
 
-                        print('API Group: {}   API Group Count: {}   Coin: {}   Length Of Move: {}   Start Day: {}   End Day: {}   Result Day: {}'.format(APIGroupID, APIGroupCounts[APIGroupID], coin, lengthOfMove, DayID, EndDayID, ResultDayID))
+                        # print('API Group: {}   API Group Count: {}   Coin: {}   Length Of Move: {}   Start Day: {}   End Day: {}   Days To Result: {}   Result Day: {}'.format(
+                        #     APIGroupID, 
+                        #     APIGroupCounts[APIGroupID], 
+                        #     coin, 
+                        #     lengthOfMove, 
+                        #     DayID, 
+                        #     EndDayID, 
+                        #     ResultDay,
+                        #     ResultDayID
+                        # ))
 
                         # BEGIN CALCULATIONS
 
-                        # TO DO TRY, if we FAIL it's probably becaseu we are missing a coin ID in this date range
+                        # DO A TRY, if we FAIL it's probably becaseu we are missing a coin ID in this date range
 
                         try:
 
-                            # 1: PRICE DELTA (%) TODO
+                            # 1: PRICE DELTA (%) Both for the Move and the Result
 
                             priceFirstDay = APIDayDict[DayID][2][coin][1]
                             priceLastDay = APIDayDict[EndDayID][2][coin][1]
-
-                            print('First Day Price: {}   Last Day Price: {}'.format(priceFirstDay, priceLastDay))
-
-
-
-
-
-
-                            # 2: AVG VOLUME DELTA (%) TODO
+                            priceResult = APIDayDict[ResultDayID][2][coin][1]
+                            priceDifference = priceLastDay - priceFirstDay
+                            movePercentage = (priceDifference * 100) / priceFirstDay
+                            # 24h price change:  APIDayDict[EndDayID][2][coin][4]
+                            priceResultPercentage = ((priceResult - priceLastDay) * 100) / priceLastDay
 
 
+                            # print('  First Day Price: {}   Last Day Price: {}   Price Difference: {}   %: {}'.format(
+                            #     priceFirstDay, 
+                            #     priceLastDay, 
+                            #     priceDifference, 
+                            #     movePercentage
+                            # ))
+
+                            # print('    Result Price: {}   %: {}'.format(
+                            #     priceResult,
+                            #     priceResultPercentage
+                            # ))
+
+                            # 2: AVG VOLUME DELTA (%)
+
+                                # compare the average volume for the MOVE PERIOD to the AVERAGE for the coin.
+
+                            MoveVolumeTotal = 0
+                            DayCount = 0
+
+                            MoveVolumeDayID = DayID + 1
+
+                            while MoveVolumeDayID <= EndDayID: # go through each day in the move (except the first one)
+
+                                MoveVolumeTotal = MoveVolumeTotal + APIDayDict[MoveVolumeDayID][2][coin][2] # 2 = 24h volume
+
+                                MoveVolumeDayID = MoveVolumeDayID + 1
+                                DayCount = DayCount + 1
+
+                            MoveVolumeAverage = MoveVolumeTotal / DayCount
+                            MoveVolumeDifference = MoveVolumeAverage - coinAverageVolumes[coin]
+                            MoveVolumeDifferencePercent = (MoveVolumeDifference * 100) / coinAverageVolumes[coin]
+
+                            # print('      Move Volume Total: {}   Move Volume Average: {}   Coin Volume Average: {}   Difference: {}   %: {}'.format(
+                            #     MoveVolumeTotal, 
+                            #     MoveVolumeAverage,
+                            #     coinAverageVolumes[coin],
+                            #     MoveVolumeDifference,
+                            #     MoveVolumeDifferencePercent
+                            # ))
+
+                            # 3: Intermediate Price AND Delta %
+
+                                # if result price is higher (see how much lower % it dropped during time period between end of move and result)
+                                # if result price is lower (see how much higher % it went during time period between end of move and result)
+                                # we don't care about Day 1 or the Last Day in the series (DayID or EndDayID) - just everything in the middle
+
+                            # if lengthOfMove > 1:
+
+                            intermediateDayID = EndDayID + 1
+                            intermediateDayPriceHigh = priceLastDay # last day's price
+                            intermediateDayPriceLow = priceLastDay  # last day's price
+
+                            while intermediateDayID < ResultDayID:
+
+                                if APIDayDict[intermediateDayID][2][coin][1] < intermediateDayPriceLow:
+
+                                    intermediateDayPriceLow = APIDayDict[intermediateDayID][2][coin][1]
+
+                                if APIDayDict[intermediateDayID][2][coin][1] > intermediateDayPriceHigh:
+
+                                    intermediateDayPriceHigh = APIDayDict[intermediateDayID][2][coin][1]
+
+                                intermediateDayID = intermediateDayID + 1
+
+                            intermediateDayDifferenceHigh = intermediateDayPriceHigh - priceLastDay
+                            intermediateDayDifferenceLow = intermediateDayPriceLow - priceLastDay
+                            intermediateDayPercentageHigh = (intermediateDayDifferenceHigh * 100) / priceLastDay
+                            intermediateDayPercentageLow = (intermediateDayDifferenceLow * 100) / priceLastDay
+
+                            # print('        Max Intermediate Price High: {}   Difference: {}   %: {}'.format(
+                            #     intermediateDayPriceHigh,
+                            #     intermediateDayDifferenceHigh,
+                            #     intermediateDayPercentageHigh
+                            # ))
+                            # print('        Max Intermediate Price Low: {}   Difference: {}   %: {}'.format(
+                            #     intermediateDayPriceLow,
+                            #     intermediateDayDifferenceLow,
+                            #     intermediateDayPercentageLow
+                            # ))
+
+
+
+
+                            # find qualifying move combinations and volume combonations
+                            
+                            qualifyingMovePercentCombos = []
+
+                            for moveCombo in movePercentCombos:
+
+                                # see which move Combos qualify for this move
+
+                                if abs(moveCombo[1]) == 101: # logic is different for infinite (max) move scenarios
+
+                                    if movePercentage > 0: # positive
+
+                                        if 0 < moveCombo[0] <= movePercentage:
+
+                                            qualifyingMovePercentCombos.append(moveCombo)
+
+                                    else: # negative move
+
+                                        if movePercentage <= moveCombo[0] < 0:
+
+                                            qualifyingMovePercentCombos.append(moveCombo)
+
+                                else:
+
+                                    if movePercentage > 0: # positive
+
+                                        if moveCombo[0] <= movePercentage < moveCombo[1]:
+
+                                            qualifyingMovePercentCombos.append(moveCombo)
+
+                                    else: # negative move
+
+                                        if moveCombo[1] < movePercentage <= moveCombo[0]:
+
+                                            qualifyingMovePercentCombos.append(moveCombo)
+
+                            # print('  Move %: {}   Qualifying Combos: {}'.format(movePercentage, qualifyingMovePercentCombos))
+
+
+                            qualifyingVolumeDeltaCombos = []
+
+                            for volumeCombo in volumeDeltaCombos:
+
+                                if abs(volumeCombo[1]) == 501: # max scenario
+
+                                    if MoveVolumeDifferencePercent >= 0 and volumeCombo[1] > 0: # positive volume or zero
+
+                                        if 0 <= volumeCombo[0] <= MoveVolumeDifferencePercent:
+
+                                            qualifyingVolumeDeltaCombos.append(volumeCombo)
+
+                                    if MoveVolumeDifferencePercent <= 0 and volumeCombo[1] < 0: # negative volume or zero
+
+                                        if MoveVolumeDifferencePercent <= volumeCombo[0] <= 0:
+
+                                            qualifyingVolumeDeltaCombos.append(volumeCombo)
+
+                                else:   # not a max scenario
+
+                                    if MoveVolumeDifferencePercent > 0: # positive volume
+
+                                        if volumeCombo[0] <= MoveVolumeDifferencePercent < volumeCombo[1]:
+
+                                            qualifyingVolumeDeltaCombos.append(volumeCombo)
+
+                                    else: # negative volume
+
+                                        if volumeCombo[1] < MoveVolumeDifferencePercent <= volumeCombo[0]:
+
+                                            qualifyingVolumeDeltaCombos.append(volumeCombo)
+
+                            # print('  Volume %: {}   Qualifying Combos: {}\n'.format(MoveVolumeDifferencePercent, qualifyingVolumeDeltaCombos))
 
 
 
 
 
-                            # 3: Intermediate Price TODO
+
+
+
+                            # ADD all of these to the correct Output dictionary values:
+
+# Output Example:
+
+#
+#       {
+#           1: {                        # Coin ID
+#               1: {                    # Length of move (1 day)
+#                   '1-2%': {           # Price Move Delta Range (%)
+#                       '-0-5%': {      # Average volume delta range % (volume over this time period / average)
+#                           3: (        # days to future result
+#                               '5%',   # result % increase/decrease
+#                               25000,  # starting price
+#                               27000,  # result price
+#                               '-24%'  # average volume change over this period (volume for this period compared with average daily vol)
+#                               '2%',   # highest % change over this result (Intermediate Price Delta)
+#                               '-2%',  # lowest % change over this result period (Intermediate Price Delta)
+#                               '24000' # high of price during this result period
+#                               '24000' # low of the price during this result period
+#                           )
+#                       }
+#                   }
+#               }
+#           }
+#       }
+
+
+
+                            for moveCombos in qualifyingMovePercentCombos:
+
+                                for volumeCombos in qualifyingVolumeDeltaCombos:
+
+                                    Output[coin][lengthOfMove][moveCombo][volumeCombos][ResultDay] = (
+                                        priceResultPercentage,          # result %
+                                        priceLastDay,                   # starting price (end of move)
+                                        priceResult,                    # result price
+                                        MoveVolumeDifferencePercent,    # average volume % during this move period
+                                        intermediateDayPercentageHigh,
+                                        intermediateDayPercentageLow,
+                                        intermediateDayPriceHigh,
+                                        intermediateDayPriceLow
+                                    )
+
+                                    outputCount = outputCount + 1
 
 
 
 
 
-
-                            # 4: Intermediate Price Delta (%) TODO
 
                         except Exception as e:
 
-                            print('failed, probably missing a coin ID here. Error: {}'.format(e))
-
-
-
-
-
-                        
-
-            
-            for distance in movePercentCombos:
-
-                #################################
-                #   FOR EACH distance ('1-2%', '1-3%', ... '75-100%', '>100%', '-1-2%', '-1-3%', ... '-75-100%', '<-100%')
-                #################################
-
-                pass
-
-
-
-
-            
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                            print('failed, probably missing a coin ID for thie scenario. Error: {}'.format(e))
+                            exceptionCount = exceptionCount + 1
 
 
 
@@ -777,6 +917,7 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
     print('\ncount of distinct Coin IDs: {}'.format(len(distinctCoinIDs)))
     print('\nmove Percent Combonations: {}'.format(movePercentCombos))
     print('\nvolume Delta Combonations: {}'.format(volumeDeltaCombos))
+    # print('\ncoin Average Volumes: {}'.format(coinAverageVolumes))
 
     l = len(distinctCoinIDs) * len(dayMoves) * len(movePercentCombos) * len(volumeDeltaCombos)
     print('Estimated length of empty Output dict shell: {}'.format(l))
@@ -784,8 +925,11 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
     pprint(APIGroupCoinMembership)
     pprint(APIDayCoinMembership)
 
+    print('\nOutput count: {}'.format(f'{outputCount:,}'))
 
 
+
+print('Exception Count: {}'.format(exceptionCount))
 
 timeEnd = datetime.now()
 
@@ -802,3 +946,76 @@ else:
 #
 #   - Is there possibly a trend the is positive but not necesarily based off the same time frame each time?
 #   - If there is a trend, where is the best entry and stop loss?
+
+
+
+#####################################################################################
+#                                                                                   #
+#           Don't think we need this below - but keeping in case we do              #
+#                                                                                   #
+#####################################################################################
+
+# Output Example:
+
+#
+#       {
+#           1: {                        # Coin ID
+#               1: {                    # Length of move (1 day)
+#                   '1-2%': {           # Distance of the move
+#                       '-0-5%': {      # Average volume change % (volume over this time period / average)
+#                           3: (        # days to future result
+#                               '5%',   # result % increase/decrease
+#                               25000,  # starting price
+#                               27000,  # result price
+#                               '-24%'  # average volume change over this period (volume for this period compared with average daily vol)
+#                               '-2%',  # highest/lowest % change over this period (Intermediate Price Delta +/-)
+#                               '24000' # high/low of price during this time period
+#                           )
+#                       }
+#                   }
+#               }
+#           }
+#       }
+
+# begin creating the Output Shell (ALL scenarios)
+    # THEN add in the results
+
+# Output = {}
+
+# for coinID in distinctCoinIDs:
+
+#     ###############################
+#     #   FOR EACH coinID
+#     ###############################
+
+#     Output[coinID] = {}     # Coin ID
+    
+#     for day in dayMoves:
+
+#         #########################################
+#         #   FOR EACH coinID
+#         #       FOR EACH dayMove (Length of move)
+#         #########################################
+
+#         Output[coinID][day] = {}    # Length of Move (dayMove)
+        
+#         for distance in movePercentCombos:
+
+#             #########################################
+#             #   FOR EACH coinID
+#             #       FOR EACH dayMove (Length of move)
+#             #           FOR EACH distanceOfMove
+#             #########################################
+
+#             Output[coinID][day][distance] = {}  # Distance of the move in Percent
+            
+#             for volumeDelta in volumeDeltaCombos:
+
+#                 #############################################
+#                 #   FOR EACH coinID
+#                 #       FOR EACH dayMove (Length of move)
+#                 #           FOR EACH distanceOfMove
+#                 #               FOR EACH Average Volume Delta
+#                 #############################################
+
+#                 Output[coinID][day][distance][volumeDelta] = {}
