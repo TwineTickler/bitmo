@@ -132,6 +132,7 @@
 import validRecords as vr
 import config
 import sqlite3
+import sys
 from pprint import pprint
 from datetime import datetime
 from datetime import timedelta
@@ -269,8 +270,10 @@ for k, v in APIGroupCounts.items():
 
                 sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\''.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                 if testing: # only 3 coins if testing
+                    topXCoins = 20
+                    sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE id IN (select id from currency order by cmc_rank limit {}) AND insert_date BETWEEN \'{}\' AND \'{}\''.format(topXCoins, (APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                     # 3 coins
-                    sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1, 2, 3)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                    #sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1, 2, 3)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                     # 1 coin
                     # sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                 c.execute(sql)
@@ -505,46 +508,47 @@ for APIGroupID, APIDayID in SQLResults.items():
 # begin creating the Output Shell (ALL scenarios)
     # THEN add in the results
 
-Output = {}
+# Output = {}
 
-for coinID in distinctCoinIDs:
+# for coinID in distinctCoinIDs:
 
-    ###############################
-    #   FOR EACH coinID
-    ###############################
+#     ###############################
+#     #   FOR EACH coinID
+#     ###############################
 
-    Output[coinID] = {}     # Coin ID
+#     Output[coinID] = {}     # Coin ID
     
-    for day in dayMoves:
+#     for day in dayMoves:
 
-        #########################################
-        #   FOR EACH coinID
-        #       FOR EACH dayMove (Length of move)
-        #########################################
+#         #########################################
+#         #   FOR EACH coinID
+#         #       FOR EACH dayMove (Length of move)
+#         #########################################
 
-        Output[coinID][day] = {}    # Length of Move (dayMove)
+#         Output[coinID][day] = {}    # Length of Move (dayMove)
         
-        for distance in movePercentCombos:
+#         for distance in movePercentCombos:
 
-            #########################################
-            #   FOR EACH coinID
-            #       FOR EACH dayMove (Length of move)
-            #           FOR EACH distanceOfMove
-            #########################################
+#             #########################################
+#             #   FOR EACH coinID
+#             #       FOR EACH dayMove (Length of move)
+#             #           FOR EACH distanceOfMove
+#             #########################################
 
-            Output[coinID][day][distance] = {}  # Distance of the move in Percent
+#             Output[coinID][day][distance] = {}  # Distance of the move in Percent
             
-            for volumeDelta in volumeDeltaCombos:
+#             for volumeDelta in volumeDeltaCombos:
 
-                #############################################
-                #   FOR EACH coinID
-                #       FOR EACH dayMove (Length of move)
-                #           FOR EACH distanceOfMove
-                #               FOR EACH Average Volume Delta
-                #############################################
+#                 #############################################
+#                 #   FOR EACH coinID
+#                 #       FOR EACH dayMove (Length of move)
+#                 #           FOR EACH distanceOfMove
+#                 #               FOR EACH Average Volume Delta
+#                 #############################################
 
-                Output[coinID][day][distance][volumeDelta] = {}
+#                 Output[coinID][day][distance][volumeDelta] = {}
 
+Output = []
 
 # Shell setup, 
 # begin analyzing and storing the results
@@ -838,50 +842,49 @@ for APIGroupID, APIDayDict in SQLResults.items():
 
 # Output Example:
 
-#
-#       {
-#           1: {                        # Coin ID
-#               1: {                    # Length of move (1 day)
-#                   '1-2%': {           # Price Move Delta Range (%)
-#                       '-0-5%': {      # Average volume delta range % (volume over this time period / average)
-#                           3: (        # days to future result
-#                               '5%',   # result % increase/decrease
-#                               25000,  # starting price
-#                               27000,  # result price
-#                               '-24%'  # average volume change over this period (volume for this period compared with average daily vol)
-#                               '2%',   # highest % change over this result (Intermediate Price Delta)
-#                               '-2%',  # lowest % change over this result period (Intermediate Price Delta)
-#                               '24000' # high of price during this result period
-#                               '24000' # low of the price during this result period
-#                           )
-#                       }
-#                   }
-#               }
-#           }
-#       }
+#   [
+#       (
+#           coinID,
+#           lengthOfMove,
+#           {(1, 2), (1, 3), (1, 4), ...},      # set of qualifying move ranges (1-2%, 1-3%)
+#           {(0, 5), (0, 10), (0, 15), ...},    # set of qualifying average volume delta ranges
+#           ResultDay,                          # number of days to result
+#           priceResultPercentage,          # result %
+#           priceLastDay,                   # starting price (end of move)
+#           priceResult,                    # ending price
+#           MoveVolumeDifferencePercent,    # volume (compared to average) during the move period
+#           intermediateDayPercentageHigh,
+#           intermediateDayPercentageLow,
+#           intermediateDayPriceHigh,
+#           intermediateDayPriceLow
+#       )
+#   ]
 
+                            if len(qualifyingMovePercentCombos) > 0 and abs(priceResultPercentage) >= 1:
 
-
-                            for moveCombos in qualifyingMovePercentCombos:
-
-                                for volumeCombos in qualifyingVolumeDeltaCombos:
-
-                                    Output[coin][lengthOfMove][moveCombo][volumeCombos][ResultDay] = (
-                                        priceResultPercentage,          # result %
-                                        priceLastDay,                   # starting price (end of move)
-                                        priceResult,                    # result price
-                                        MoveVolumeDifferencePercent,    # average volume % during this move period
+                                Output.append(
+                                    (
+                                        coin,
+                                        lengthOfMove,
+                                        qualifyingMovePercentCombos,
+                                        qualifyingVolumeDeltaCombos,
+                                        ResultDay,
+                                        priceResultPercentage,
+                                        priceLastDay,
+                                        priceResult,
+                                        MoveVolumeDifferencePercent,
                                         intermediateDayPercentageHigh,
                                         intermediateDayPercentageLow,
                                         intermediateDayPriceHigh,
                                         intermediateDayPriceLow
                                     )
+                                )
 
-                                    outputCount = outputCount + 1
+                            
 
-
-
-
+                            sys.getsizeof('my list')
+                            # then convert to tuple
+                            sys.getsizeof('my tuple')
 
 
                         except Exception as e:
@@ -898,8 +901,8 @@ for APIGroupID, APIDayDict in SQLResults.items():
 # Print all entities we've created:
 if showAllObjects: # change to true if you'd like to see all variables we use in this script
 
-    for k, v in validRecords.items():
-        print('KEY: {}   VALUE: {}'.format(k, v))
+    # for k, v in validRecords.items():
+    #     print('KEY: {}   VALUE: {}'.format(k, v))
 
     for k, v in APIGroupCounts.items():
         print('API Key Group ID: {}   Count: {}'.format(k, v))
@@ -915,21 +918,49 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
 
     print('distinct Coin IDs: \n{}'.format(distinctCoinIDs))
     print('\ncount of distinct Coin IDs: {}'.format(len(distinctCoinIDs)))
-    print('\nmove Percent Combonations: {}'.format(movePercentCombos))
-    print('\nvolume Delta Combonations: {}'.format(volumeDeltaCombos))
+    # print('\nmove Percent Combonations: {}'.format(movePercentCombos))
+    # print('\nvolume Delta Combonations: {}'.format(volumeDeltaCombos))
     # print('\ncoin Average Volumes: {}'.format(coinAverageVolumes))
 
-    l = len(distinctCoinIDs) * len(dayMoves) * len(movePercentCombos) * len(volumeDeltaCombos)
-    print('Estimated length of empty Output dict shell: {}'.format(l))
+    # l = len(distinctCoinIDs) * len(dayMoves) * len(movePercentCombos) * len(volumeDeltaCombos)
+    # print('Estimated length of empty Output dict shell: {}'.format(l))
 
-    pprint(APIGroupCoinMembership)
-    pprint(APIDayCoinMembership)
+    # pprint(APIGroupCoinMembership)
+    # pprint(APIDayCoinMembership)
 
-    print('\nOutput count: {}'.format(f'{outputCount:,}'))
+x = Output[0]
+print('\nFirst Entry: \n')
+print('Coin ID: {}'.format(x[0]))
+print('Length Of Move: {} days'.format(x[1]))
+print('Qualifying Move Ranges: {}'.format(x[2]))
+print('Qualifying Result Volume Ranges: {}'.format(x[3]))
+print('Number of days to Result: {} days'.format(x[4]))
+print('Result %: {:.1f}%'.format(x[5]))
+print('Starting Price: ${:,.2f} - Result Price: ${:,.2f}'.format(x[6], x[7]))
+print('Average Relative Move Volume: {:,.1f}%'.format(x[8]))
+print('Stop loss High: {:.1f}% (${:,.2f})'.format(x[9], x[11]))
+print('Stop loss Low: {:.1f}% (${:,.2f})'.format(x[10], x[12]))
 
+# print("{:.1f}".format(my_float))
 
+print('\nLast Entry: \n')
+x = Output[-1]
+print('Coin ID: {}'.format(x[0]))
+print('Length Of Move: {} days'.format(x[1]))
+print('Qualifying Move Ranges: {}'.format(x[2]))
+print('Qualifying Result Volume Ranges: {}'.format(x[3]))
+print('Number of days to Result: {} days'.format(x[4]))
+print('Result %: {:.1f}%'.format(x[5]))
+print('Starting Price: ${:,.2f} - Result Price: ${:,.2f}'.format(x[6], x[7]))
+print('Average Relative Move Volume: {:,.1f}%'.format(x[8]))
+print('Stop loss High: {:.1f}% (${:,.2f})'.format(x[9], x[11]))
+print('Stop loss Low: {:.1f}% (${:,.2f})'.format(x[10], x[12]))
 
-print('Exception Count: {}'.format(exceptionCount))
+print('\nOutput count: {:,}'.format(len(Output)))
+# f'{len(Output):,}'
+
+print('Exception Count: {:,}'.format(exceptionCount))
+# f'{exceptionCount:,}'
 
 timeEnd = datetime.now()
 

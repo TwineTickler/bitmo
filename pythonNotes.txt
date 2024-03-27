@@ -75,3 +75,8 @@ Helpful Files:
 
 from pprint import pprint
 import pause (need to install: pip install pause)
+
+Printing Numbers:
+    {:,.2f} - formats the number to add commas 3,000,000 as well as .2 decimal places
+
+abs() -> returns the absolute value of a number
