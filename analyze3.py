@@ -270,7 +270,7 @@ for k, v in APIGroupCounts.items():
 
                 sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\''.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                 if testing: # only 3 coins if testing
-                    topXCoins = 20
+                    topXCoins = 40
                     sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE id IN (select id from currency order by cmc_rank limit {}) AND insert_date BETWEEN \'{}\' AND \'{}\''.format(topXCoins, (APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                     # 3 coins
                     #sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1, 2, 3)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
@@ -377,7 +377,7 @@ for coinID in distinctCoinIDs:
     AverageVolume = CoinVolumeTotal / CoinCount
     coinAverageVolumes[coinID] = AverageVolume
 
-    print('Coin ID: {}   Total Volume: {}   Coin Count: {}   Average Volume: {}'.format(coinID, CoinVolumeTotal, CoinCount, AverageVolume))
+    # print('Coin ID: {}   Total Volume: {}   Coin Count: {}   Average Volume: {}'.format(coinID, CoinVolumeTotal, CoinCount, AverageVolume))
 
 
 
@@ -612,7 +612,7 @@ for APIGroupID, APIDayDict in SQLResults.items():
         #   FOR EACH coinID (in this API Group)
         ###############################
 
-        pprint('API Group ID: {} - Coin ID: {}'.format(APIGroupID, coin))
+        # pprint('API Group ID: {} - Coin ID: {}'.format(APIGroupID, coin))
 
         for lengthOfMove in dayMoves:
 
@@ -860,7 +860,8 @@ for APIGroupID, APIDayDict in SQLResults.items():
 #       )
 #   ]
 
-                            if len(qualifyingMovePercentCombos) > 0 and abs(priceResultPercentage) >= 1:
+                            # might need to remove this requirement for price result percentage
+                            if len(qualifyingMovePercentCombos) > 0: # and abs(priceResultPercentage) >= 1:
 
                                 Output.append(
                                     (
@@ -882,15 +883,99 @@ for APIGroupID, APIDayDict in SQLResults.items():
 
                             
 
-                            sys.getsizeof('my list')
+                            # sys.getsizeof('my list')
                             # then convert to tuple
-                            sys.getsizeof('my tuple')
+                            # sys.getsizeof('my tuple')
 
 
                         except Exception as e:
 
                             print('failed, probably missing a coin ID for thie scenario. Error: {}'.format(e))
                             exceptionCount = exceptionCount + 1
+
+
+# aggregate the output
+
+# Combos we are looking at: TODO
+#
+#   lengthOfMove            - dayMoves
+#   qualifyingMoveRange     - movePercentCombos
+#   qualifyingVolumeDelta   - volumeDeltaCombos
+#   ResultDay               - ResultDay
+
+lengthOfMoveCounter = {}
+moveComboCounter = {}
+volumeComboCounter = {}
+resultDayCounter = {}
+
+for lengthOfMove in dayMoves: # (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMove
+
+    lengthOfMoveCounter[lengthOfMove] = 0
+
+
+
+
+    for moveCombo in movePercentCombos:
+
+        if moveCombo not in moveComboCounter.keys():
+
+            moveComboCounter[moveCombo] = 0
+
+
+
+        for volumeCombo in volumeDeltaCombos:
+
+
+
+
+
+
+            for rDay in ResultDay:
+
+
+
+
+
+
+                for aScenario in Output:
+
+                    if aScenario[1] == lengthOfMove:
+
+                        lengthOfMoveCounter[lengthOfMove] = lengthOfMoveCounter[lengthOfMove] + 1
+
+
+
+
+
+
+    # for aResult in Output:
+
+    #     if aResult[1] == lengthOfMove:
+
+    #         lengthOfMoveCounter = lengthOfMoveCounter + 1
+
+
+
+    #         for resultDay in resultDays:
+
+    #             if aResult[4] == resultDay:
+
+                    
+
+    print('Count of Length Of Moves ({}): {}'.format(lengthOfMove, lengthOfMoveCounter))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -916,7 +1001,7 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
 
         pass
 
-    print('distinct Coin IDs: \n{}'.format(distinctCoinIDs))
+    # print('distinct Coin IDs: \n{}'.format(distinctCoinIDs))
     print('\ncount of distinct Coin IDs: {}'.format(len(distinctCoinIDs)))
     # print('\nmove Percent Combonations: {}'.format(movePercentCombos))
     # print('\nvolume Delta Combonations: {}'.format(volumeDeltaCombos))
