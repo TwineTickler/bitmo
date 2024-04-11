@@ -273,7 +273,7 @@ for k, v in APIGroupCounts.items():
                     topXCoins = 40
                     sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE id IN (select id from currency order by cmc_rank limit {}) AND insert_date BETWEEN \'{}\' AND \'{}\''.format(topXCoins, (APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                     # 3 coins
-                    #sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1, 2, 3)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                    sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1, 2, 3)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                     # 1 coin
                     # sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                 c.execute(sql)
@@ -715,7 +715,7 @@ for APIGroupID, APIDayDict in SQLResults.items():
                             #     MoveVolumeDifferencePercent
                             # ))
 
-                            # 3: Intermediate Price AND Delta %
+                            # 3: Intermediate Price AND Delta % (to determine stop loss)
 
                                 # if result price is higher (see how much lower % it dropped during time period between end of move and result)
                                 # if result price is lower (see how much higher % it went during time period between end of move and result)
@@ -856,12 +856,13 @@ for APIGroupID, APIDayDict in SQLResults.items():
 #           intermediateDayPercentageHigh,
 #           intermediateDayPercentageLow,
 #           intermediateDayPriceHigh,
-#           intermediateDayPriceLow
+#           intermediateDayPriceLow,
+#           movePercentage                  # change in % during the move
 #       )
 #   ]
 
                             # might need to remove this requirement for price result percentage
-                            if len(qualifyingMovePercentCombos) > 0: # and abs(priceResultPercentage) >= 1:
+                            if len(qualifyingMovePercentCombos) > 0 and abs(priceResultPercentage) >= 1:
 
                                 Output.append(
                                     (
@@ -877,7 +878,8 @@ for APIGroupID, APIDayDict in SQLResults.items():
                                         intermediateDayPercentageHigh,
                                         intermediateDayPercentageLow,
                                         intermediateDayPriceHigh,
-                                        intermediateDayPriceLow
+                                        intermediateDayPriceLow,
+                                        movePercentage
                                     )
                                 )
 
@@ -903,45 +905,43 @@ for APIGroupID, APIDayDict in SQLResults.items():
 #   qualifyingVolumeDelta   - volumeDeltaCombos
 #   ResultDay               - ResultDay
 
-lengthOfMoveCounter = {}
-moveComboCounter = {}
-volumeComboCounter = {}
-resultDayCounter = {}
+# lengthOfMoveCounter = {}
+# moveComboCounter = {}
+# volumeComboCounter = {}
+# resultDayCounter = {}
 
-for lengthOfMove in dayMoves: # (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMove
+# for lengthOfMove in dayMoves: # (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMove
 
-    lengthOfMoveCounter[lengthOfMove] = 0
-
-
-
-
-    for moveCombo in movePercentCombos:
-
-        if moveCombo not in moveComboCounter.keys():
-
-            moveComboCounter[moveCombo] = 0
+#     print('beginning lengthofMove {}'.format(lengthOfMove))
+#     lengthOfMoveCounter[lengthOfMove] = 0
 
 
+#     for moveCombo in movePercentCombos:
 
-        for volumeCombo in volumeDeltaCombos:
+#         if moveCombo not in moveComboCounter.keys():
+
+#             moveComboCounter[moveCombo] = 0
+
+
+#         for volumeCombo in volumeDeltaCombos:
 
 
 
 
-
-
-            for rDay in ResultDay:
-
+#             for rDay in resultDays:
 
 
 
 
+#                 for aScenario in Output:
 
-                for aScenario in Output:
+#                     if aScenario[1] == lengthOfMove:
 
-                    if aScenario[1] == lengthOfMove:
+#                         lengthOfMoveCounter[lengthOfMove] = lengthOfMoveCounter[lengthOfMove] + 1
 
-                        lengthOfMoveCounter[lengthOfMove] = lengthOfMoveCounter[lengthOfMove] + 1
+#                     if moveCombo in aScenario[2]:
+
+#                         moveComboCounter[moveCombo] = moveComboCounter[moveCombo] + 1
 
 
 
@@ -962,7 +962,141 @@ for lengthOfMove in dayMoves: # (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMove
 
                     
 
-    print('Count of Length Of Moves ({}): {}'.format(lengthOfMove, lengthOfMoveCounter))
+    # print('Count of Length Of Moves ({}): {:,}'.format(lengthOfMove, lengthOfMoveCounter[lengthOfMove]))
+    # print('Count of Move Combinations: {}'.format(moveComboCounter))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Combos we are looking at: TODO
+#
+#   lengthOfMove            - dayMoves
+#   qualifyingMoveRange     - movePercentCombos
+#   qualifyingVolumeDelta   - volumeDeltaCombos
+#   ResultDay               - ResultDay
+
+# Output2 example:
+
+# {
+#     1: {                        # day moves (1, 2, 3, ... 30)
+#         1: {                    # result day (1, 2, 3, ... 30)
+#             (1, 2): {           # move percentage combinations ((1, 2),(1, 3), ... (100, 101))
+#                 (0, 5): [       # volume change combinations ((0, 5),(0, 10), ... (0, 501))
+#                     (
+#                         10.5,   # priceResultPercentage
+#                         4.3,    # intermediateDayPercentageHigh
+#                         -3.0    # intermediateDayPercentageLow
+#                     ),
+#                     ...
+#                 ]      #      
+#             }
+#         }
+#     }              
+# }
+
+Output2 = {}
+
+for lengthOfMove in dayMoves:   # (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMove
+
+    Output2[lengthOfMove] = {}
+
+    for rDay in resultDays:
+
+        Output2[lengthOfMove][rDay] = {}
+
+        for moveCombo in movePercentCombos:
+
+            Output2[lengthOfMove][rDay][moveCombo] = {}
+
+            for volumeCombo in volumeDeltaCombos:
+
+                Output2[lengthOfMove][rDay][moveCombo][volumeCombo] = []
+
+print('Total Scenarios: {:,}'.format(len(Output)))
+
+output2Counter = 0
+
+for aScenario in Output:    # for each entry in Output
+
+    for lengthOfMove in Output2.keys():    # for each length of move
+
+        if aScenario[1] == lengthOfMove:    # if length of move matches the Output entry move
+
+            for rDay in Output2[lengthOfMove].keys():
+
+                if aScenario[4] == rDay:
+
+                    for moveCombo in Output2[lengthOfMove][rDay].keys():
+
+                        for moveComboS in aScenario[2]:
+
+                            if moveCombo == moveComboS:
+
+                                for volumeCombo in Output2[lengthOfMove][rDay][moveCombo].keys():
+
+                                    for volumeComboS in aScenario[3]:
+
+                                        if volumeCombo == volumeComboS:
+
+                                            Output2[lengthOfMove][rDay][moveCombo][volumeCombo].append((
+                                                aScenario[5],
+                                                aScenario[9],
+                                                aScenario[10]
+                                            ))
+
+                                            output2Counter = output2Counter + 1
+
+print('Output 2 Count: {:,}'.format(output2Counter))
+
+
+# Output Example:
+
+#   [
+#       (
+#           coinID,
+#           lengthOfMove,
+#           {(1, 2), (1, 3), (1, 4), ...},      # set of qualifying move ranges (1-2%, 1-3%)
+#           {(0, 5), (0, 10), (0, 15), ...},    # set of qualifying average volume delta ranges
+#           ResultDay,                          # number of days to result
+#           priceResultPercentage,          # result %
+#           priceLastDay,                   # starting price (end of move)
+#           priceResult,                    # ending price
+#           MoveVolumeDifferencePercent,    # volume (compared to average) during the move period
+#           intermediateDayPercentageHigh,
+#           intermediateDayPercentageLow,
+#           intermediateDayPriceHigh,
+#           intermediateDayPriceLow,
+#           movePercentage                  # change in % during the move
+#       )
+#   ]
+
+
+
+
+
+
+
 
 
 
@@ -1025,6 +1159,7 @@ print('Starting Price: ${:,.2f} - Result Price: ${:,.2f}'.format(x[6], x[7]))
 print('Average Relative Move Volume: {:,.1f}%'.format(x[8]))
 print('Stop loss High: {:.1f}% (${:,.2f})'.format(x[9], x[11]))
 print('Stop loss Low: {:.1f}% (${:,.2f})'.format(x[10], x[12]))
+print('Move % Change: {:.1f}'.format(x[13]))
 
 # print("{:.1f}".format(my_float))
 
@@ -1040,6 +1175,7 @@ print('Starting Price: ${:,.2f} - Result Price: ${:,.2f}'.format(x[6], x[7]))
 print('Average Relative Move Volume: {:,.1f}%'.format(x[8]))
 print('Stop loss High: {:.1f}% (${:,.2f})'.format(x[9], x[11]))
 print('Stop loss Low: {:.1f}% (${:,.2f})'.format(x[10], x[12]))
+print('Move % Change: {:.1f}'.format(x[13]))
 
 print('\nOutput count: {:,}'.format(len(Output)))
 # f'{len(Output):,}'

@@ -2,6 +2,7 @@
 CMCApiKey.txt
 aada_scraper/credentials.py
 bitmo_run_checker/credentials.py
+creds.txt
 
 # ignore log and db folders
 /logs
