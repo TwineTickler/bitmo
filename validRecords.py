@@ -39,12 +39,12 @@ def findValidRecords(
     ):
 
     import sqlite3
-    import config
+    # import config
     from datetime import datetime
     from datetime import timedelta
 
     db_prefix = 'bitmo-01-prod.db'
-    db = config.absolute_path + config.db_path + db_prefix
+    db = '/Users/scarpenter/Documents/bitmo/db/bitmo-01-prod.db' #  = config.absolute_path + config.db_path + db_prefix
 
     def open_db_connection():
         # Connect to the database    print('database is: {}'.format(db))

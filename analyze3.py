@@ -130,7 +130,7 @@
 #               
 
 import validRecords as vr
-import config
+# import config
 import sqlite3
 import sys
 from pprint import pprint
@@ -138,7 +138,7 @@ from datetime import datetime
 from datetime import timedelta
 
 timeStart = datetime.now()
-productionDB = '{}{}{}'.format(config.absolute_path,config.db_path,config.db_name)
+productionDB = '/Users/scarpenter/Documents/bitmo/db/bitmo-01-prod.db'    #= '{}{}{}'.format(config.absolute_path,config.db_path,config.db_name)
 validRecords = vr.findValidRecords()
 SQLResults = {}
 distinctCoinIDs = []
@@ -150,6 +150,11 @@ movePercentCombos = []
 volumeDeltaLows = (0, 5, 10, 15, 25, 50, 75, 100, 200, 500)      # using these strictly for the loops below to build out all the combinations
 volumeDeltaHighs = (5, 10, 15, 25, 50, 75, 100, 200, 500, 501)   # 501 is used to represent anything above 500
 volumeDeltaCombos = []
+top1000StableCoins = ['USDT', 'USDC', 'DAI', 'FDUSD', 'USDD', 'TUSD', 'USDe', 'FRAX',
+					'PYUSD', 'USDJ', 'USTC', 'CRVUSD', 'USDP', 'EURS', 'GUSD', 'LUSD',
+					'vUSDC', 'USDX', 'BUSD', 'AEUR', 'vBUSD', 'SBD', 'RSV', 'SUSD',
+					'EURC', 'EURt', 'CSUD', 'XSGD', 'vUSDT', 'USDK', 'ZUSD', 'USDV',
+					'MKUSD', 'FEI', 'BIDR', 'GYEN'] # as of April 14, 2024 - sourced from: https://coinmarketcap.com/view/stablecoin/
 
 for l in movePercentLows:
 
@@ -180,6 +185,7 @@ volumeDeltaCombos = tuple(volumeDeltaCombos) # move to a tuple to save memory
 #
 testing = True
 showAllObjects = True
+testingFiveRecordsOnly = False
 #
 ############################################
 
@@ -204,7 +210,9 @@ if testing:
     # for k, v in validRecords.items():
     #     print('KEY: {}   VALUE: {}'.format(k, v))
 
-    pass
+    print('\n###############                   ###############')
+    print('###############     Test Mode     ###############')
+    print('###############                   ###############\n')
 
 APIGroupCounts = {}
 
@@ -233,14 +241,18 @@ for k, v in validRecords.items():
 
 if testing:
     APIGroupCounts = {3: 17, 4: 62}
+if testingFiveRecordsOnly:
+    APIGroupCounts = {3: 5}
     
 
-print('\nAPIGroupCounts Object:')
+print('APIGroupCounts Object:')
+APIGroupCountTotal = 0
 
 for k, v in APIGroupCounts.items():
     print('API Key Group ID: {}   Count: {}'.format(k, v))
+    APIGroupCountTotal = APIGroupCountTotal + v
 
-
+print('DB: {}'.format(productionDB))
 
 conn = sqlite3.connect(productionDB)
 c = conn.cursor()
@@ -268,12 +280,25 @@ for k, v in APIGroupCounts.items():
 
             if (APIEntry[0] == k): # if API Group ID's match in both validRecords and APIGroupCounts
 
-                sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\''.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                # original: sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\''.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                
+                topXCoins = 3
+                sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE id IN (select id from currency WHERE symbol NOT IN ('
+                for stableCoinSymbol in top1000StableCoins:
+                    sql = sql + '\'{}\','.format(stableCoinSymbol)
+                sql = sql[:-1] + ') order by cmc_rank limit {}) AND insert_date BETWEEN \'{}\' AND \'{}\''.format(topXCoins, (APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+
                 if testing: # only 3 coins if testing
-                    topXCoins = 40
-                    sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE id IN (select id from currency order by cmc_rank limit {}) AND insert_date BETWEEN \'{}\' AND \'{}\''.format(topXCoins, (APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                    topXCoins = 4
+                    sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE id IN (select id from currency WHERE symbol NOT IN ('
+                    for stableCoinSymbol in top1000StableCoins:
+                        sql = sql + '\'{}\','.format(stableCoinSymbol)
+                    sql = sql[:-1] + ') order by cmc_rank limit {}) AND insert_date BETWEEN \'{}\' AND \'{}\''.format(topXCoins, (APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                    # OLD (no stables coins removed) sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE id IN (select id from currency order by cmc_rank limit {}) AND insert_date BETWEEN \'{}\' AND \'{}\''.format(topXCoinsTesting, (APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                    
                     # 3 coins
-                    sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1, 2, 3)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                    # sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1, 1027, 825)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
+                    
                     # 1 coin
                     # sql = 'SELECT id, symbol, price, volume_24h, volume_change_24h, percent_change_24h, percent_change_7d, percent_change_30d, market_cap, cmc_rank, num_market_pairs FROM quote WHERE insert_date BETWEEN \'{}\' AND \'{}\' AND id IN (1)'.format((APIEntry[1] - timedelta(minutes=3)), (APIEntry[1] + timedelta(minutes=3)))
                 c.execute(sql)
@@ -347,7 +372,7 @@ for k, v in APIGroupCounts.items():
                     
                     SQLResults[k][validRecordsKey][2][coinRecord[0]] = (coinRecord[1:])
 
-                    # collect a distinct list of all coin ID's for later TODO
+                    # collect a distinct list of all coin ID's for later
 
                     if coinRecord[0] not in distinctCoinIDs:
 
@@ -377,7 +402,7 @@ for coinID in distinctCoinIDs:
     AverageVolume = CoinVolumeTotal / CoinCount
     coinAverageVolumes[coinID] = AverageVolume
 
-    # print('Coin ID: {}   Total Volume: {}   Coin Count: {}   Average Volume: {}'.format(coinID, CoinVolumeTotal, CoinCount, AverageVolume))
+    print('Coin ID: {}   Total Volume: {}   Coin Count: {}   Average Volume: {}'.format(coinID, CoinVolumeTotal, CoinCount, AverageVolume))
 
 
 
@@ -588,7 +613,7 @@ for APIGroupID, APIDayDict in SQLResults.items():
 
         APIDayIDs.append(DayID)
 
-    pprint('Day IDs (for this API group): {}'.format(APIDayIDs))
+    # pprint('Day IDs (for this API group): {}'.format(APIDayIDs))
 
     # print('\nAPI Key Group ID: {}   Count: {}\n'.format(APIGroupID, APIGroupCount))
 
@@ -862,7 +887,7 @@ for APIGroupID, APIDayDict in SQLResults.items():
 #   ]
 
                             # might need to remove this requirement for price result percentage
-                            if len(qualifyingMovePercentCombos) > 0 and abs(priceResultPercentage) >= 1:
+                            if len(qualifyingMovePercentCombos) > 0: #and abs(priceResultPercentage) >= 1:
 
                                 Output.append(
                                     (
@@ -892,7 +917,7 @@ for APIGroupID, APIDayDict in SQLResults.items():
 
                         except Exception as e:
 
-                            print('failed, probably missing a coin ID for thie scenario. Error: {}'.format(e))
+                            # print('failed, probably missing a coin ID for thie scenario. Error: {}'.format(e))
                             exceptionCount = exceptionCount + 1
 
 
@@ -1004,6 +1029,7 @@ for APIGroupID, APIDayDict in SQLResults.items():
 #             (1, 2): {           # move percentage combinations ((1, 2),(1, 3), ... (100, 101))
 #                 (0, 5): [       # volume change combinations ((0, 5),(0, 10), ... (0, 501))
 #                     (
+#                           1,    # output2Counter
 #                         10.5,   # priceResultPercentage
 #                         4.3,    # intermediateDayPercentageHigh
 #                         -3.0    # intermediateDayPercentageLow
@@ -1016,6 +1042,7 @@ for APIGroupID, APIDayDict in SQLResults.items():
 # }
 
 Output2 = {}
+output2EmptyCombinations = 0
 
 for lengthOfMove in dayMoves:   # (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMove
 
@@ -1032,8 +1059,7 @@ for lengthOfMove in dayMoves:   # (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMov
             for volumeCombo in volumeDeltaCombos:
 
                 Output2[lengthOfMove][rDay][moveCombo][volumeCombo] = []
-
-print('Total Scenarios: {:,}'.format(len(Output)))
+                output2EmptyCombinations = output2EmptyCombinations + 1
 
 output2Counter = 0
 
@@ -1059,15 +1085,18 @@ for aScenario in Output:    # for each entry in Output
 
                                         if volumeCombo == volumeComboS:
 
+                                            output2Counter = output2Counter + 1
+
                                             Output2[lengthOfMove][rDay][moveCombo][volumeCombo].append((
+                                                output2Counter,
                                                 aScenario[5],
                                                 aScenario[9],
                                                 aScenario[10]
                                             ))
 
-                                            output2Counter = output2Counter + 1
+                                            
 
-print('Output 2 Count: {:,}'.format(output2Counter))
+
 
 
 # Output Example:
@@ -1097,7 +1126,7 @@ print('Output 2 Count: {:,}'.format(output2Counter))
 
 
 
-
+# cyle though each scenario and record any scenarios in which 
 
 
 
@@ -1136,7 +1165,8 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
         pass
 
     # print('distinct Coin IDs: \n{}'.format(distinctCoinIDs))
-    print('\ncount of distinct Coin IDs: {}'.format(len(distinctCoinIDs)))
+    print('\nCount of distinct Coin IDs: {}'.format(len(distinctCoinIDs)))
+    print('API Group Count (total number of days): {}\n'.format(APIGroupCountTotal))
     # print('\nmove Percent Combonations: {}'.format(movePercentCombos))
     # print('\nvolume Delta Combonations: {}'.format(volumeDeltaCombos))
     # print('\ncoin Average Volumes: {}'.format(coinAverageVolumes))
@@ -1146,36 +1176,41 @@ if showAllObjects: # change to true if you'd like to see all variables we use in
 
     # pprint(APIGroupCoinMembership)
     # pprint(APIDayCoinMembership)
+print('###############                  ###############')
+print('###############     Output 1     ###############')
+print('###############                  ###############\n')
 
-x = Output[0]
-print('\nFirst Entry: \n')
-print('Coin ID: {}'.format(x[0]))
-print('Length Of Move: {} days'.format(x[1]))
-print('Qualifying Move Ranges: {}'.format(x[2]))
-print('Qualifying Result Volume Ranges: {}'.format(x[3]))
-print('Number of days to Result: {} days'.format(x[4]))
-print('Result %: {:.1f}%'.format(x[5]))
-print('Starting Price: ${:,.2f} - Result Price: ${:,.2f}'.format(x[6], x[7]))
-print('Average Relative Move Volume: {:,.1f}%'.format(x[8]))
-print('Stop loss High: {:.1f}% (${:,.2f})'.format(x[9], x[11]))
-print('Stop loss Low: {:.1f}% (${:,.2f})'.format(x[10], x[12]))
-print('Move % Change: {:.1f}'.format(x[13]))
+print('Total Scenarios: {:,}'.format(len(Output)))
+
+# x = Output[0]
+# print('\nOutput First Entry: \n')
+# print('Coin ID: {}'.format(x[0]))
+# print('Length Of Move: {} days'.format(x[1]))
+# print('Qualifying Move Ranges: {}'.format(x[2]))
+# print('Qualifying Result Volume Ranges: {}'.format(x[3]))
+# print('Number of days to Result: {} days'.format(x[4]))
+# print('Result %: {:.1f}%'.format(x[5]))
+# print('Starting Price: ${:,.2f} - Result Price: ${:,.2f}'.format(x[6], x[7]))
+# print('Average Relative Move Volume: {:,.1f}%'.format(x[8]))
+# print('Stop loss High: {:.1f}% (${:,.2f})'.format(x[9], x[11]))
+# print('Stop loss Low: {:.1f}% (${:,.2f})'.format(x[10], x[12]))
+# print('Move % Change: {:.1f}'.format(x[13]))
 
 # print("{:.1f}".format(my_float))
 
-print('\nLast Entry: \n')
-x = Output[-1]
-print('Coin ID: {}'.format(x[0]))
-print('Length Of Move: {} days'.format(x[1]))
-print('Qualifying Move Ranges: {}'.format(x[2]))
-print('Qualifying Result Volume Ranges: {}'.format(x[3]))
-print('Number of days to Result: {} days'.format(x[4]))
-print('Result %: {:.1f}%'.format(x[5]))
-print('Starting Price: ${:,.2f} - Result Price: ${:,.2f}'.format(x[6], x[7]))
-print('Average Relative Move Volume: {:,.1f}%'.format(x[8]))
-print('Stop loss High: {:.1f}% (${:,.2f})'.format(x[9], x[11]))
-print('Stop loss Low: {:.1f}% (${:,.2f})'.format(x[10], x[12]))
-print('Move % Change: {:.1f}'.format(x[13]))
+# print('\nOutput Last Entry: \n')
+# x = Output[-1]
+# print('Coin ID: {}'.format(x[0]))
+# print('Length Of Move: {} days'.format(x[1]))
+# print('Qualifying Move Ranges: {}'.format(x[2]))
+# print('Qualifying Result Volume Ranges: {}'.format(x[3]))
+# print('Number of days to Result: {} days'.format(x[4]))
+# print('Result %: {:.1f}%'.format(x[5]))
+# print('Starting Price: ${:,.2f} - Result Price: ${:,.2f}'.format(x[6], x[7]))
+# print('Average Relative Move Volume: {:,.1f}%'.format(x[8]))
+# print('Stop loss High: {:.1f}% (${:,.2f})'.format(x[9], x[11]))
+# print('Stop loss Low: {:.1f}% (${:,.2f})'.format(x[10], x[12]))
+# print('Move % Change: {:.1f}'.format(x[13]))
 
 print('\nOutput count: {:,}'.format(len(Output)))
 # f'{len(Output):,}'
@@ -1183,15 +1218,99 @@ print('\nOutput count: {:,}'.format(len(Output)))
 print('Exception Count: {:,}'.format(exceptionCount))
 # f'{exceptionCount:,}'
 
+print('\n###############                  ###############')
+print('###############     Output 2     ###############')
+print('###############                  ###############\n')
+
+print('Empty Output 2 Combination Count: {:,}'.format(output2EmptyCombinations))
+print('Output 2 Entries: {:,}'.format(output2Counter))
+
+print('Output 2 First Entry:\n')
+
+firstEntry = True
+entryCounter = 0
+for k1 in Output2.keys():
+    for k2 in Output2[k1].keys():
+        for k3 in Output2[k1][k2].keys():
+            for k4 in Output2[k1][k2][k3].keys():
+                for t in Output2[k1][k2][k3][k4]: # this is an array of tuples
+                    if t:
+                        entryCounter = entryCounter + 1
+                    if firstEntry:
+                        if t:           # if this entry isn't empty
+                            if firstEntry:      # only print this header info once
+                                print('Day move: {}'.format(k1))
+                                print('Result day: {}'.format(k2))
+                                print('Move % range: {}'.format(k3))
+                                print('Volume % range: {}'.format(k4))
+                                print('Number of entries in this scenario: {:,}'.format(len(Output2[k1][k2][k3][k4])))
+                                for t2 in Output2[k1][k2][k3][k4]:
+                                    print('---   ---   ---')
+                                    print('Entry #: {:,}'.format(t2[0]))
+                                    print('Result Price %: {:.2f} %'.format(t2[1]))
+                                    print('Stop loss HIGH: {:.2f} %'.format(t2[2]))
+                                    print('Stop loss LOW: {:.2f} %'.format(t2[3]))
+                                firstEntry = False
+                    if entryCounter == output2Counter: # if entryCounter # matches the Total number of entries (this should be the last one)
+                        lastArrayLength = len(Output2[k1][k2][k3][k4]) # find how many entries are in this array. Because we could have already passed over a few.
+                        print('\nOutput 2 Last Entry:\n')
+                        print('Day move: {}'.format(k1))
+                        print('Result day: {}'.format(k2))
+                        print('Move % range: {}'.format(k3))
+                        print('Volume % range: {}'.format(k4))
+                        print('Number of entries in this scenario: {:,}'.format(len(Output2[k1][k2][k3][k4])))
+                        while lastArrayLength > 0:
+                            lastArrayLength = lastArrayLength - 1
+                            print('---   ---   ---')
+                            print('Entry #: {:,}'.format(Output2[k1][k2][k3][k4][lastArrayLength][0]))
+                            print('Result Price %: {:.2f} %'.format(Output2[k1][k2][k3][k4][lastArrayLength][1]))
+                            print('Stop loss HIGH: {:.2f} %'.format(Output2[k1][k2][k3][k4][lastArrayLength][2]))
+                            print('Stop loss LOW: {:.2f} %'.format(Output2[k1][k2][k3][k4][lastArrayLength][3]))
+                                
+
+                            
+                            
+                        
+                                            
+
+
+# print('Day Move: {}'.format(Output2[30].values()))
+
+
+# Output2 example:
+
+# {
+#     1: {                        # day moves (1, 2, 3, ... 30)
+#         1: {                    # result day (1, 2, 3, ... 30)
+#             (1, 2): {           # move percentage combinations ((1, 2),(1, 3), ... (100, 101))
+#                 (0, 5): [       # volume change combinations ((0, 5),(0, 10), ... (0, 501))
+#                     (
+#                           1,    # output2Counter
+#                         10.5,   # priceResultPercentage
+#                         4.3,    # intermediateDayPercentageHigh
+#                         -3.0    # intermediateDayPercentageLow
+#                     ),
+#                     ...
+#                 ]      #      
+#             }
+#         }
+#     }              
+# }
+
+
+print('\n###############                 ###############')
+print('###############     Runtime     ###############')
+print('###############                 ###############\n')
+
 timeEnd = datetime.now()
 
 s = (timeEnd-timeStart).seconds
 if s < 60:
-    print('\nTotal runtime: {} Seconds\n'.format(s))
+    print('Total runtime: {} Seconds\n'.format(s))
 else:
     m = int(s/60)
     s = s%60
-    print('\nTotal runtime: {} Minutes {} Seconds\n'.format(m,s))
+    print('Total runtime: {} Minutes {} Seconds\n'.format(m,s))
 
 
 # further questions to ask ourselves after this:
