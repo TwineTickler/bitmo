@@ -129,7 +129,15 @@
 #               Move (% up or down)
 #               
 
+
+
+
+
+
+
+
 import validRecords as vr
+import pathlib
 # import config
 import sqlite3
 import sys
@@ -137,9 +145,10 @@ from pprint import pprint
 from datetime import datetime
 from datetime import timedelta
 
+absolute_path = str(pathlib.Path(__file__).parent.resolve()) # wherever THIS file is
+dbPath = absolute_path + '/../db/analyze-testing.db'
 timeStart = datetime.now()
-productionDB = '/Users/scarpenter/Documents/bitmo/db/bitmo-01-prod.db'    #= '{}{}{}'.format(config.absolute_path,config.db_path,config.db_name)
-validRecords = vr.findValidRecords()
+validRecords = vr.findValidRecords(dbPath)
 SQLResults = {}
 distinctCoinIDs = []
 dayMoves = (1, 2, 3, 5, 7, 10, 14, 30)  # aka lengthOfMove
@@ -253,9 +262,9 @@ for k, v in APIGroupCounts.items():
     print('API Key Group ID: {}   Count: {}'.format(k, v))
     APIGroupCountTotal = APIGroupCountTotal + v
 
-print('DB: {}'.format(productionDB))
+print('DB: {}'.format(dbPath))
 
-conn = sqlite3.connect(productionDB)
+conn = sqlite3.connect(dbPath)
 c = conn.cursor()
 
 #####################################
@@ -1163,6 +1172,8 @@ print('Max entry scenario count: {:,}'.format(maxScenarioEntryCount))
 print('Average scenario entry count: {:.1f}'.format(output2Counter/scenarioWithEntriesCount))
 print('Positive result count: {:,}'.format(positiveResultCount))
 print('Negative result count: {:,}\n'.format(negativeResultCount))
+
+scenarioResults = sorted(scenarioResults)
                         
 print('First Result: {}'.format(scenarioResults[0]))
 print('Second Result: {}'.format(scenarioResults[1]))

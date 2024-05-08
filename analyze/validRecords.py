@@ -6,6 +6,7 @@
 #
 #    Receives:
 #
+#        dbPath string - required
 #        nextDownloadMinTime integer (seconds) - default 28800 (8 hours)
 #        nextDownloadMaxTime integer (seconds) - default 28800 (8 hours)
 #        apiDownloadTimeWindow integer (seconds) - default 300 (5 minutes)
@@ -33,6 +34,7 @@
 
 
 def findValidRecords(
+        dbPath,
         nextDownloadMinTime=28800,
         nextDownloadMaxTime=28800,
         apiDownloadTimeWindow=300
@@ -43,13 +45,10 @@ def findValidRecords(
     from datetime import datetime
     from datetime import timedelta
 
-    db_prefix = 'bitmo-01-prod.db'
-    db = '/Users/scarpenter/Documents/bitmo/db/bitmo-01-prod.db' #  = config.absolute_path + config.db_path + db_prefix
-
     def open_db_connection():
         # Connect to the database    print('database is: {}'.format(db))
         try:
-            conn = sqlite3.connect(db)
+            conn = sqlite3.connect(dbPath)
             # print('connected')
 
         except:
