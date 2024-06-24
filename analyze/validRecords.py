@@ -29,6 +29,22 @@
 #
 #        Next API call must be +/- 8 hours of the next expected API call (+24 hours)
 #
+#   Notes:
+#
+#   Each valid API response will be a member of a group of API responses.
+#   Each group member must adhere to the requirements of the timeframe in between API responses to be 
+#       considered a valid API response for that group.
+#
+#   For example:
+#       If 45 consecutive days are found with API responses each day, analysis can be done for that entire group of responses.
+#       If day 46 is missing an API response, then a new group must be made for the remainder of the records
+#           since data will be missing for day 46.
+#
+#   Analysis will be done for one group at a time.
+#
+#   In an ideal situation, it is possible to go back and fill in the gaps in missing days.
+#       I believe this can be accomplished using the coinmarketcap historical API endpoint.
+#
 #
 #####################################################################################################################
 
