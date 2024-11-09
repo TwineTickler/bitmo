@@ -2,9 +2,23 @@
 #       analyze3.py attempted to do all analysis within the python runtime environment.
 #           I don't think this approach is sustainable long term after beginning to run some of the results.
 #           Even increasing the number of currencies from more than 3 or 4 takes hours to complete the program.
-#       I am now creating processResults.py that will change this approach and store results to a local DB.
+#       I am now creating analyze4.py that will change this approach and store results to a local DB.
 #       It should run each currency at a time, and never re-run analysis on dates that have already been analysed.
 #
+#   Step 1: (TODO)
+#       - (DONE) Ensure the database is setup properly inclusing creating two ID columns in two tables (addDownloadID.sql)
+#       - Create a re-runable script that will insert API download ID's for any API download's that do not already have them.
+#       - This should be incorporated into Bitmo on each download in the case of any that are missing one.
+#
+#   Step 2: (TODO)
+#       Add API download ID's to Bitmo download service
+#
+#   Step 3: (TODO)
+#       Create processResults.py that will run, and store results and will then on subsequent runs, only process and analyze NEW results.
+#
+#   Step 4: (TODO)
+#       Add a new program (Trade Detector) that will analyze the results of the most recent API download and make
+#       a recommendation for trades.
 #   
 #   Here are some ideas of how we can experiment with this analyses:
 #

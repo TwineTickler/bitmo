@@ -80,3 +80,12 @@ Printing Numbers:
     {:,.2f} - formats the number to add commas 3,000,000 as well as .2 decimal places
 
 abs() -> returns the absolute value of a number
+
+
+
+
+
+GIT:
+
+    git reset HEAD -- filename (this will remove a staged file, opposite of git add filename)
+    

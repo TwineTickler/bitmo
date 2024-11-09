@@ -71,7 +71,8 @@ def create_tables(conn, caller_is_run=True):
                 credit_count INTEGER,
                 total_count INTEGER,
                 endpoint TEXT,
-                insert_date NUMERIC
+                insert_date NUMERIC,
+                download_ID INTEGER
             )
         """)    
         log.log(l + 'response_status table is setup')
@@ -125,7 +126,8 @@ def create_tables(conn, caller_is_run=True):
                 market_cap_dominance NUMERIC,
                 last_updated_cmc NUMERIC,
                 cmc_rank INTEGER,
-                num_market_pairs INTEGER
+                num_market_pairs INTEGER,
+                response_status_ID INTEGER
             )
         ''')
         log.log(l + 'quote table is setup')
